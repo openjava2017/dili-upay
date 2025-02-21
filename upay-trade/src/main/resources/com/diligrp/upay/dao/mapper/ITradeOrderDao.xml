@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.diligrp.upay.trade.dao.ITradeOrderDao">
+    <resultMap id="TradeOrderMap" type="com.diligrp.upay.trade.model.TradeOrder">
+        <id column="id" property="id"/>
+        <result column="mch_id" property="mchId"/>
+        <result column="app_id" property="appId"/>
+        <result column="trade_id" property="tradeId"/>
+        <result column="type" property="type"/>
+        <result column="out_trade_no" property="outTradeNo"/>
+        <result column="account_id" property="accountId"/>
+        <result column="name" property="name"/>
+        <result column="amount" property="amount"/>
+        <result column="max_amount" property="maxAmount"/>
+        <result column="fee" property="fee"/>
+        <result column="goods" property="goods"/>
+        <result column="state" property="state"/>
+        <result column="description" property="description"/>
+        <result column="version" property="version"/>
+        <result column="created_time" property="createdTime"/>
+        <result column="modified_time" property="modifiedTime"/>
+    </resultMap>
+
+    <insert id="insertTradeOrder">
+        INSERT INTO upay_trade_order${strategy.partition}(mch_id, app_id, trade_id, type, out_trade_no, account_id, name,
+            amount, max_amount, fee, goods, state, description, version, created_time, modified_time)
+        VALUES (#{tradeOrder.mchId}, #{tradeOrder.appId}, #{tradeOrder.tradeId}, #{tradeOrder.type}, #{tradeOrder.outTradeNo}, #{tradeOrder.accountId}, #{tradeOrder.name},
+            #{tradeOrder.amount}, #{tradeOrder.maxAmount}, #{tradeOrder.fee}, #{tradeOrder.goods}, #{tradeOrder.state}, #{tradeOrder.description}, #{tradeOrder.version}, #{tradeOrder.createdTime}, #{tradeOrder.modifiedTime})
+    </insert>
+
+    <select id="findByTradeId" resultMap="TradeOrderMap">
+        SELECT * FROM upay_trade_order${strategy.partition} WHERE trade_id = #{tradeId}
+    </select>
+
+    <select id="findByOutTradeNo" resultMap="TradeOrderMap">
+        SELECT * FROM upay_trade_order${strategy.partition} WHERE mch_id = #{mchId} AND out_trade_no = #{outTradeNo}
+    </select>
+
+    <update id="compareAndSetState">
+        UPDATE upay_trade_order${strategy.partition} SET version = version + 1
+        <if test="tradeState.amount != null">
+            , amount = #{tradeState.amount}
+        </if>
+        <if test="tradeState.maxAmount != null">
+            , max_amount = #{tradeState.maxAmount}
+        </if>
+        <if test="tradeState.fee != null">
+            , fee = #{tradeState.fee}
+        </if>
+        <if test="tradeState.state != null">
+            , state = #{tradeState.state}
+        </if>
+        <if test="tradeState.modifiedTime != null">
+            , modified_time = #{tradeState.modifiedTime}
+        </if>
+        WHERE
+          trade_id = #{tradeState.tradeId} AND version = #{tradeState.version}
+    </update>
+</mapper>

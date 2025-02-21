@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.diligrp.upay.core.dao.IFundAccountDao">
+    <resultMap id="FundAccountMap" type="com.diligrp.upay.core.model.FundAccount">
+        <id column="id" property="id"/>
+        <result column="account_id" property="accountId"/>
+        <result column="balance" property="balance"/>
+        <result column="frozen_amount" property="frozenAmount"/>
+        <result column="vouch_amount" property="vouchAmount"/>
+        <result column="mch_id" property="mchId"/>
+        <result column="version" property="version"/>
+        <result column="created_time" property="createdTime"/>
+        <result column="modified_time" property="modifiedTime"/>
+    </resultMap>
+
+    <insert id="insertFundAccount" parameterType="com.diligrp.upay.core.model.FundAccount">
+        INSERT INTO upay_fund_account(account_id, balance, frozen_amount, vouch_amount, mch_id, version, created_time, modified_time)
+        VALUES
+          (#{accountId}, #{balance}, #{frozenAmount}, #{vouchAmount}, #{mchId}, #{version}, #{createdTime}, #{modifiedTime})
+    </insert>
+
+    <select id="findByAccountId" parameterType="long" resultMap="FundAccountMap">
+        SELECT * FROM upay_fund_account WHERE account_id = #{accountId}
+    </select>
+
+    <select id="lockByAccountId" parameterType="long" resultMap="FundAccountMap">
+        SELECT * FROM upay_fund_account WHERE account_id = #{accountId} FOR UPDATE
+    </select>
+
+    <update id="updateByAccountId" parameterType="com.diligrp.upay.core.model.FundAccount">
+        UPDATE upay_fund_account SET version = version + 1
+        <if test="balance != null">
+            , balance = #{balance}
+        </if>
+        <if test="frozenAmount != null">
+            , frozen_amount = #{frozenAmount}
+        </if>
+        <if test="vouchAmount != null">
+            , vouch_amount = #{vouchAmount}
+        </if>
+        <if test="modifiedTime != null">
+            , modified_time = #{modifiedTime}
+        </if>
+        WHERE account_id = #{accountId}
+    </update>
+
+    <update id="compareAndSetVersion" parameterType="com.diligrp.upay.core.model.FundAccount">
+        UPDATE upay_fund_account SET version = version + 1
+        <if test="balance != null">
+            , balance = #{balance}
+        </if>
+        <if test="frozenAmount != null">
+            , frozen_amount = #{frozenAmount}
+        </if>
+        <if test="vouchAmount != null">
+            , vouch_amount = #{vouchAmount}
+        </if>
+        <if test="modifiedTime != null">
+            , modified_time = #{modifiedTime}
+        </if>
+        WHERE account_id = #{accountId} AND version = #{version}
+    </update>
+
+    <select id="sumCustomerFund" resultType="com.diligrp.upay.core.model.FundAccount">
+        SELECT
+            SUM(ufa.balance) AS balance, SUM(ufa.frozen_amount) AS frozenAmount, SUM(ufa.vouch_amount) AS vouchAmount
+        FROM
+            upay_fund_account ufa
+        INNER JOIN
+            upay_user_account uua ON ufa.account_id = uua.account_id
+        WHERE
+            uua.mch_id = #{mchId} AND uua.customer_id = #{customerId} AND uua.state != 3
+        GROUP BY
+            uua.customer_id
+    </select>
+
+    <select id="listFundAccounts" resultType="com.diligrp.upay.core.model.FundAccount">
+        SELECT
+            ufa.account_id AS accountId, ufa.balance, ufa.frozen_amount AS frozenAmount, ufa.vouch_amount
+        FROM
+            upay_fund_account ufa
+        INNER JOIN
+            upay_user_account uua ON ufa.account_id = uua.account_id
+        WHERE
+            uua.mch_id = #{mchId} AND uua.customer_id = #{customerId} AND uua.state != 3
+        ORDER BY
+            ufa.id
+    </select>
+</mapper>

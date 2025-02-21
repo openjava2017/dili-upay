@@ -1,0 +1,7 @@
+group = 'com.diligrp'
+archivesBaseName = 'upay-trade'
+
+dependencies {
+    api project(':upay-sentinel')
+    api project(':upay-pipeline')
+}

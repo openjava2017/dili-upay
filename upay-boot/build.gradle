@@ -1,0 +1,12 @@
+group = 'com.diligrp'
+archivesBaseName = 'upay-boot'
+
+jar.enabled = false
+bootJar {
+    enabled = true
+    archiveBaseName = 'upay-boot'
+}
+
+dependencies {
+    implementation project(':upay-trade')
+}

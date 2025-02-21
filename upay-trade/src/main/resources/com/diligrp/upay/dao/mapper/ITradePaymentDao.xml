@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.diligrp.upay.trade.dao.ITradePaymentDao">
+    <resultMap id="TradePaymentMap" type="com.diligrp.upay.trade.model.TradePayment">
+        <id column="id" property="id"/>
+        <result column="payment_id" property="paymentId"/>
+        <result column="trade_id" property="tradeId"/>
+        <result column="channel_id" property="channelId"/>
+        <result column="pay_type" property="payType"/>
+        <result column="account_id" property="accountId"/>
+        <result column="name" property="name"/>
+        <result column="amount" property="amount"/>
+        <result column="fee" property="fee"/>
+        <result column="protocol_id" property="protocolId"/>
+        <result column="cycle_no" property="cycleNo"/>
+        <result column="state" property="state"/>
+        <result column="description" property="description"/>
+        <result column="version" property="version"/>
+        <result column="created_time" property="createdTime"/>
+        <result column="modified_time" property="modifiedTime"/>
+    </resultMap>
+
+    <insert id="insertTradePayment">
+        INSERT INTO upay_trade_payment${strategy.partition}(payment_id, trade_id, channel_id, pay_type, account_id, name, amount, fee,
+            protocol_id, cycle_no, state, description, version, created_time, modified_time)
+        VALUES (#{payment.paymentId}, #{payment.tradeId}, #{payment.channelId}, #{payment.payType}, #{payment.accountId}, #{payment.name}, #{payment.amount}, #{payment.fee},
+            #{payment.protocolId}, #{payment.cycleNo}, #{payment.state}, #{payment.description}, #{payment.version}, #{payment.createdTime}, #{payment.modifiedTime})
+    </insert>
+
+    <select id="findByPaymentId" resultMap="TradePaymentMap">
+        SELECT * FROM upay_trade_payment${strategy.partition} WHERE payment_id = #{paymentId}
+    </select>
+
+    <select id="listByTradeId" resultMap="TradePaymentMap">
+        SELECT * FROM upay_trade_payment${strategy.partition} WHERE trade_id = #{tradeId} ORDER BY ID
+    </select>
+
+    <select id="findByTradeId" resultMap="TradePaymentMap">
+        SELECT * FROM upay_trade_payment${strategy.partition} WHERE trade_id = #{tradeId} ORDER BY ID
+    </select>
+
+    <update id="compareAndSetState">
+        UPDATE upay_trade_payment${strategy.partition} SET version = version + 1
+        <if test="paymentState.amount != null">
+            , amount = #{paymentState.amount}
+        </if>
+        <if test="paymentState.fee != null">
+            , fee = #{paymentState.fee}
+        </if>
+        <if test="paymentState.state != null">
+            , state = #{paymentState.state}
+        </if>
+        <if test="paymentState.modifiedTime != null">
+            , modified_time = #{paymentState.modifiedTime}
+        </if>
+        WHERE payment_id = #{paymentState.paymentId} AND version = #{paymentState.version}
+    </update>
+</mapper>

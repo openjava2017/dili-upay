@@ -1,0 +1,7 @@
+rootProject.name = 'dili-upay'
+include 'upay-shared'
+include 'upay-core'
+include 'upay-pipeline'
+include 'upay-sentinel'
+include 'upay-trade'
+include 'upay-boot'

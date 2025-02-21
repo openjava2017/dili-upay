@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.diligrp.upay.shared.dao.DataDictionaryDao">
+    <resultMap id="DataDictionaryMap" type="com.diligrp.upay.shared.model.DataDictionary">
+        <id column="id" property="id"/>
+        <result column="group_code" property="groupCode"/>
+        <result column="code" property="code"/>
+        <result column="name" property="name"/>
+        <result column="value" property="value"/>
+        <result column="description" property="description"/>
+        <result column="created_time" property="createdTime"/>
+        <result column="modified_time" property="modifiedTime"/>
+    </resultMap>
+
+    <insert id="insertDataDictionary" parameterType="com.diligrp.upay.shared.model.DataDictionary">
+        INSERT INTO data_dictionary
+            (group_code, code, name, value, description, created_time, modified_time)
+        VALUES
+            (#{groupCode}, #{code}, #{name}, #{value}, #{description}, #{createdTime}, #{modifiedTime})
+    </insert>
+
+    <select id="findDataDictionaryByCode" resultMap="DataDictionaryMap">
+        SELECT * FROM data_dictionary WHERE group_code = #{groupCode} AND code = #{code}
+    </select>
+
+    <select id="findDataDictionaries" resultMap="DataDictionaryMap">
+        SELECT * FROM data_dictionary WHERE group_code = #{groupCode}
+        ORDER BY id
+    </select>
+
+    <update id="updateDataDictionary">
+        UPDATE data_dictionary SET value = #{value}, modified_time = #{modifiedTime}
+        <if test="name != null">
+            , name = #{name}
+        </if>
+        <if test="description != null">
+            , description = #{description}
+        </if>
+        WHERE group_code = #{groupCode} AND code = #{code}
+    </update>
+</mapper>

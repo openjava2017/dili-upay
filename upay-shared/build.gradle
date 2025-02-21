@@ -1,0 +1,10 @@
+group = 'com.diligrp'
+archivesBaseName = 'upay-shared'
+
+dependencies {
+    api 'io.lettuce:lettuce-core'
+    api 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.4'
+    api 'org.springframework.boot:spring-boot-starter-amqp'
+
+    runtimeOnly 'mysql:mysql-connector-java:8.0.33'
+}

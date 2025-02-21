@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.diligrp.upay.trade.dao.IFrozenOrderDao">
+    <resultMap id="FrozenOrderMap" type="com.diligrp.upay.trade.model.FrozenOrder">
+        <id column="id" property="id"/>
+        <result column="payment_id" property="paymentId"/>
+        <result column="account_id" property="accountId"/>
+        <result column="child_id" property="childId"/>
+        <result column="name" property="name"/>
+        <result column="type" property="type"/>
+        <result column="amount" property="amount"/>
+        <result column="state" property="state"/>
+        <result column="extension" property="extension"/>
+        <result column="description" property="description"/>
+        <result column="version" property="version"/>
+        <result column="created_time" property="createdTime"/>
+        <result column="modified_time" property="modifiedTime"/>
+    </resultMap>
+
+    <insert id="insertFrozenOrder" parameterType="com.diligrp.upay.trade.model.FrozenOrder">
+        INSERT INTO upay_frozen_order(payment_id, account_id, child_id, name, type, amount, state,
+            extension, description, version, created_time, modified_time)
+        VALUES
+          (#{paymentId}, #{accountId}, #{childId}, #{name}, #{type}, #{amount}, #{state},
+           #{extension}, #{description}, #{version}, #{createdTime}, #{modifiedTime})
+    </insert>
+
+    <select id="findByPaymentId" parameterType="string" resultMap="FrozenOrderMap">
+        SELECT * FROM upay_frozen_order WHERE payment_id = #{paymentId}
+    </select>
+
+    <update id="compareAndSetState" parameterType="com.diligrp.upay.trade.domain.FrozenStateDTO">
+        UPDATE upay_frozen_order SET version = version + 1
+        <if test="state != null">
+            , state = #{state}
+        </if>
+        <if test="modifiedTime != null">
+            , modified_time = #{modifiedTime}
+        </if>
+        WHERE payment_id = #{paymentId} AND version = #{version}
+    </update>
+
+    <select id="listFrozenOrders" parameterType="com.diligrp.upay.trade.domain.FrozenOrderQuery" resultMap="FrozenOrderMap">
+        SELECT
+            *
+        FROM
+            upay_frozen_order
+        WHERE
+            account_id = #{accountId}
+        <if test="type != null">
+            AND type = #{type}
+        </if>
+        <if test="state != null">
+            AND state = #{state}
+        </if>
+        <if test="startTime != null">
+            <![CDATA[AND created_time >= #{startTime}]]>
+        </if>
+        <if test="endTime != null">
+            <![CDATA[AND created_time <= #{endTime}]]>
+        </if>
+        ORDER BY created_time DESC
+        LIMIT #{start}, #{limit}
+    </select>
+
+    <select id="countFrozenOrders" parameterType="com.diligrp.upay.trade.domain.FrozenOrderQuery" resultType="long">
+        SELECT
+            COUNT(*)
+        FROM
+            upay_frozen_order
+        WHERE
+            account_id = #{accountId}
+            <if test="type != null">
+                AND type = #{type}
+            </if>
+            <if test="state != null">
+                AND state = #{state}
+            </if>
+            <if test="startTime != null">
+                <![CDATA[AND created_time >= #{startTime}]]>
+            </if>
+            <if test="endTime != null">
+                <![CDATA[AND created_time <= #{endTime}]]>
+            </if>
+    </select>
+
+    <select id="findFrozenAmount" parameterType="long" resultType="com.diligrp.upay.trade.domain.FrozenAmount">
+        SELECT
+          account_id, SUM(CASE WHEN type=1 THEN amount ELSE 0 END) AS tradeFrozen, SUM(CASE WHEN type=2 THEN amount ELSE 0 END) AS manFrozen
+        FROM
+          upay_frozen_order
+        WHERE
+          account_id=#{accountId} AND state=1
+        GROUP BY
+          account_id
+    </select>
+</mapper>
