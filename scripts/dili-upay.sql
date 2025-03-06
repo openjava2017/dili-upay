@@ -428,8 +428,8 @@ CREATE TABLE `upay_user_protocol` (
 -- --------------------------------------------------------------------
 -- 通道管理配置数据模型
 -- --------------------------------------------------------------------
-DROP TABLE IF EXISTS `upay_pipeline`;
-CREATE TABLE `upay_pipeline` (
+DROP TABLE IF EXISTS `upay_payment_pipeline`;
+CREATE TABLE `upay_payment_pipeline` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `mch_id` BIGINT NOT NULL COMMENT '商户ID',
   `pipeline_id` BIGINT NOT NULL COMMENT '通道ID',
@@ -443,6 +443,28 @@ CREATE TABLE `upay_pipeline` (
   `modified_time` DATETIME COMMENT '修改时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY  `uk_payment_pipeline_pipelineId` (`pipeline_id`) USING BTREE
+) ENGINE=InnoDB;
+
+-- --------------------------------------------------------------------
+-- 微信支付通道参数配置数据模型
+-- --------------------------------------------------------------------
+DROP TABLE IF EXISTS `upay_wechat_param`;
+CREATE TABLE `upay_wechat_param` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `pipeline_id` BIGINT NOT NULL COMMENT '通道ID',
+  `mch_id` VARCHAR(20) NOT NULL COMMENT '商户号', -- 服务商模式下为服务商商户号
+  `app_id` VARCHAR(30) NOT NULL COMMENT '小程序ID',
+  `app_secret` VARCHAR(50) NOT NULL COMMENT '小程序密钥',
+  `sub_mch_id` VARCHAR(20) COMMENT '子商户号', -- 当子商户号为空时为服务商模式
+  `sub_app_id` VARCHAR(30) COMMENT '子商户小程序ID', -- 服务商模式下使用
+  `serial_no` VARCHAR(50) NOT NULL COMMENT '商户公钥序列号',
+  `private_key` TEXT NOT NULL COMMENT '商户私钥',
+  `wechat_serial_no` VARCHAR(50) NOT NULL COMMENT '微信公钥序列号',
+  `wechat_public_key` TEXT NOT NULL COMMENT '微信公钥',
+  `api_v3_key` VARCHAR(50) NOT NULL COMMENT '微信apiV3Key',
+  `created_time` DATETIME COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY  `uk_wechat_param_pipelineId` (`pipeline_id`) USING BTREE
 ) ENGINE=InnoDB;
 
 -- --------------------------------------------------------------------
@@ -461,7 +483,7 @@ CREATE TABLE `upay_bank_direct_payment` (
   `bank_account` VARCHAR(30) NOT NULL COMMENT '银行账户',
   `account_name` VARCHAR(40) COMMENT '银行账户名',
   `amount` BIGINT NOT NULL COMMENT '申请金额-分',
-  `paid_time` DATETIME COMMENT '支付时间',
+  `pay_time` DATETIME COMMENT '支付时间',
   `out_trade_no` VARCHAR(40) COMMENT '通道流水号',
   `state` TINYINT UNSIGNED NOT NULL COMMENT '状态',
   `retry_times` INTEGER UNSIGNED NOT NULL COMMENT '重试次数',
@@ -475,7 +497,7 @@ CREATE TABLE `upay_bank_direct_payment` (
   UNIQUE KEY `uk_bank_payment_paymentId` (`payment_id`) USING BTREE,
   KEY `idx_bank_payment_tradeId` (`trade_id`) USING BTREE,
   KEY `idx_bank_payment_accountId` (`account_id`) USING BTREE,
-  KEY `idx_bank_payment_paidTime` (`paid_time`) USING BTREE,
+  KEY `idx_bank_payment_payTime` (`pay_time`) USING BTREE,
   KEY `idx_bank_payment_outTradeNo` (`out_trade_no`) USING BTREE,
   KEY `idx_bank_payment_createdTime` (`created_time`) USING BTREE
 ) ENGINE=InnoDB;
@@ -490,14 +512,15 @@ CREATE TABLE `upay_bank_online_payment` (
   `trade_id` VARCHAR(40) NOT NULL COMMENT '交易ID',
   `type` TINYINT UNSIGNED NOT NULL COMMENT '交易类型',
   `payment_id` VARCHAR(40) NOT NULL COMMENT '支付ID',
+  `pay_type` TINYINT UNSIGNED NOT NULL COMMENT '支付方式', -- 微信/支付宝/网银
   `pipeline_id` BIGINT NOT NULL COMMENT '通道ID',
   `account_id` BIGINT NOT NULL COMMENT '账号ID',
   `name` VARCHAR(40) NOT NULL COMMENT '账号名称',
-  `qr_code` VARCHAR(128) COMMENT '二维码信息',
-  `goods_desc` VARCHAR(128) COMMENT '商品描述',
+  `code` VARCHAR(128) COMMENT '付款码等信息',
+  `goods` VARCHAR(128) COMMENT '商品描述',
   `amount` BIGINT NOT NULL COMMENT '申请金额-分',
   `payer_id` VARCHAR(40) COMMENT '支付方', -- 比如：微信OpenId
-  `paid_time` DATETIME COMMENT '支付时间',
+  `pay_time` DATETIME COMMENT '支付时间',
   `out_trade_no` VARCHAR(40) COMMENT '通道流水号',
   `state` TINYINT UNSIGNED NOT NULL COMMENT '状态',
   `retry_times` INTEGER UNSIGNED NOT NULL COMMENT '重试次数',
@@ -511,7 +534,7 @@ CREATE TABLE `upay_bank_online_payment` (
   UNIQUE KEY `uk_online_payment_paymentId` (`payment_id`) USING BTREE,
   KEY `idx_online_payment_tradeId` (`trade_id`) USING BTREE,
   KEY `idx_online_payment_accountId` (`account_id`) USING BTREE,
-  KEY `idx_online_payment_paidTime` (`paid_time`) USING BTREE,
+  KEY `idx_online_payment_payTime` (`pay_time`) USING BTREE,
   KEY `idx_online_payment_outTradeNo` (`out_trade_no`) USING BTREE,
   KEY `idx_online_payment_createdTime` (`created_time`) USING BTREE
 ) ENGINE=InnoDB;
@@ -524,10 +547,11 @@ CREATE TABLE `upay_wechat_payment` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `mch_id` BIGINT NOT NULL COMMENT '支付商户ID',
   `wx_mch_id` varchar(40) NOT NULL COMMENT '微信商户号',
+  `app_id` varchar(40) NOT NULL COMMENT '微信AppID',
   `trade_id` VARCHAR(40) NOT NULL COMMENT '交易ID',
   `type` TINYINT UNSIGNED NOT NULL COMMENT '交易类型',
   `payment_id` VARCHAR(40) NOT NULL COMMENT '支付ID',
-  `paid_type` TINYINT UNSIGNED NOT NULL COMMENT '支付方式', -- JSAPI NATIVE
+  `pay_type` TINYINT UNSIGNED NOT NULL COMMENT '支付方式', -- JSAPI NATIVE
   `pipeline_id` BIGINT NOT NULL COMMENT '通道ID',
   `account_id` BIGINT NOT NULL COMMENT '账号ID',
   `name` VARCHAR(40) NOT NULL COMMENT '账号名称',
@@ -535,10 +559,9 @@ CREATE TABLE `upay_wechat_payment` (
   `amount` BIGINT NOT NULL COMMENT '申请金额-分',
   `prepay_id` VARCHAR(128) COMMENT '预支付ID', -- 微信预支付ID或二维码链接
   `payer_id` VARCHAR(40) COMMENT '支付方OpenId',
-  `paid_time` DATETIME COMMENT '支付时间',
+  `pay_time` DATETIME COMMENT '支付时间',
   `out_trade_no` VARCHAR(40) COMMENT '微信流水号',
   `state` TINYINT UNSIGNED NOT NULL COMMENT '申请状态',
-  `state_code` VARCHAR(20) COMMENT '微信支付状态',
   `notify_url` VARCHAR(128) COMMENT '业务回调链接',
   `version` INTEGER UNSIGNED NOT NULL COMMENT '数据版本号',
   `description` VARCHAR(256) COMMENT '备注',
@@ -548,7 +571,7 @@ CREATE TABLE `upay_wechat_payment` (
   UNIQUE KEY `uk_wechat_payment_paymentId` (`payment_id`) USING BTREE,
   KEY `idx_wechat_payment_tradeId` (`trade_id`) USING BTREE,
   KEY `idx_wechat_payment_accountId` (`account_id`) USING BTREE,
-  KEY `idx_wechat_payment_paidTime` (`paid_time`, `state`) USING BTREE,
+  KEY `idx_wechat_payment_payTime` (`pay_time`, `state`) USING BTREE,
   KEY `idx_wechat_payment_outTradeNo` (`out_trade_no`) USING BTREE,
   KEY `idx_wechat_payment_createdTime` (`created_time`) USING BTREE
 ) ENGINE=InnoDB;

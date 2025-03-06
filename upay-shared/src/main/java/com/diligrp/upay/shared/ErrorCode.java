@@ -16,8 +16,8 @@ public class ErrorCode {
     public static final int OBJECT_NOT_FOUND = 500004;
     // 对象已存在
     public static final int OBJECT_ALREADY_EXISTS = 500005;
-    // 服务不存在
-    public static final int SERVICE_NOT_AVAILABLE = 501001;
+    // 服务访问失败
+    public static final int SERVICE_ACCESS_FAILED = 501001;
     // 用户密码不正确
     public static final int INVALID_USER_PASSWORD = 502001;
     // 无效对象状态

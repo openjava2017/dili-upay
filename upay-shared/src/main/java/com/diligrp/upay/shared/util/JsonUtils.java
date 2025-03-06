@@ -81,6 +81,14 @@ public class JsonUtils {
         }
     }
 
+    public static void fromJsonString(Object javaBean, String json) {
+        try {
+            objectMapper.readerForUpdating(javaBean).readValue(json);
+        } catch (JsonProcessingException ex) {
+            throw new IllegalArgumentException("Deserialize json exception", ex);
+        }
+    }
+
     public static <T> String toJsonString(T object) {
         try {
             return objectMapper.writeValueAsString(object);

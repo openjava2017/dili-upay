@@ -9,4 +9,6 @@ bootJar {
 
 dependencies {
     implementation project(':upay-trade')
+    implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery:2023.0.3.2'
+    implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config:2023.0.3.2'
 }

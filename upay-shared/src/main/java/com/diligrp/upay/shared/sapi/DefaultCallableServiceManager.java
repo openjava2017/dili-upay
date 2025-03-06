@@ -41,7 +41,7 @@ public class DefaultCallableServiceManager implements ICallableServiceManager {
     private Message<?> doCallService(String service, RequestContext context, String payload) throws Throwable {
         CallableServiceEndpoint<?> endpoint = callableServiceEngine.callableServiceEndpoint(service);
         if (endpoint == null) {
-            throw new PlatformServiceException(ErrorCode.SERVICE_NOT_AVAILABLE, String.format("Callable service {%s} unavailable", service));
+            throw new PlatformServiceException(ErrorCode.SERVICE_ACCESS_FAILED, String.format("Callable service {%s} unavailable", service));
         }
 
         ServiceRequest request = new ServiceRequest();
