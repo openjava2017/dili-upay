@@ -11,10 +11,6 @@ public class WechatParam extends BaseDO {
     private String appId;
     // 小程序密钥
     private String appSecret;
-    // 子商户号, 当子商户号为空时为服务商模式
-    private String subMchId;
-    // 子商户小程序ID
-    private String subAppId;
     // 商户公钥序列号
     private String serialNo;
     // 商户私钥
@@ -25,6 +21,8 @@ public class WechatParam extends BaseDO {
     private String wechatPublicKey;
     // 微信apiV3Key
     private String apiV3Key;
+    // 通道类型: 直连通道或服务商通道
+    private Integer type;
 
     public Long getPipelineId() {
         return pipelineId;
@@ -56,22 +54,6 @@ public class WechatParam extends BaseDO {
 
     public void setAppSecret(String appSecret) {
         this.appSecret = appSecret;
-    }
-
-    public String getSubMchId() {
-        return subMchId;
-    }
-
-    public void setSubMchId(String subMchId) {
-        this.subMchId = subMchId;
-    }
-
-    public String getSubAppId() {
-        return subAppId;
-    }
-
-    public void setSubAppId(String subAppId) {
-        this.subAppId = subAppId;
     }
 
     public String getSerialNo() {
@@ -112,5 +94,13 @@ public class WechatParam extends BaseDO {
 
     public void setApiV3Key(String apiV3Key) {
         this.apiV3Key = apiV3Key;
+    }
+
+    public Integer getType() {
+        return type;
+    }
+
+    public void setType(Integer type) {
+        this.type = type;
     }
 }

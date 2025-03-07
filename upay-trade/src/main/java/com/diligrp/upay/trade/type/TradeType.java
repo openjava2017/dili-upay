@@ -36,6 +36,8 @@ public enum TradeType implements IEnumType {
 
     ONLINE_FEE("在线缴费", 32),
 
+    ONLINE_TRADE("在线交易", 33),
+
     REFUND_TRADE("交易退款", 41);
 
     private final String name;

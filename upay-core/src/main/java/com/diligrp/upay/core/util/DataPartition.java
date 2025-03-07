@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DataPartition {
 
-    private static Map<Long, DataPartition> strategies = new ConcurrentHashMap<>();
+    private static final Map<Long, DataPartition> strategies = new ConcurrentHashMap<>();
 
     static {
         register(DataPartition.of(2L, "2"));

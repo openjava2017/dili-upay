@@ -37,19 +37,6 @@ public class WechatConstants {
     public static String NOTIFY_EVENT_TYPE = "TRANSACTION.SUCCESS";
     public static String REFUND_EVENT_TYPE = "REFUND.SUCCESS";
 
-    // 公众号支付
-    public static String PAY_JSAPI = "JSAPI";
-    // 扫码支付
-    public static String PAY_NATIVE = "NATIVE";
-    // App支付
-    public static String PAY_APP = "App";
-    // 付款码支付
-    public static String PAY_MICROPAY = "MICROPAY";
-    // H5支付
-    public static String PAY_MWEB = "MWEB";
-    // 刷脸支付
-    public static String PAY_FACEPAY = "FACEPAY";
-
 
     // 支付状态常量列表
     public static final String STATE_SUCCESS = "SUCCESS"; // 支付成功

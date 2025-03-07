@@ -455,13 +455,12 @@ CREATE TABLE `upay_wechat_param` (
   `mch_id` VARCHAR(20) NOT NULL COMMENT '商户号', -- 服务商模式下为服务商商户号
   `app_id` VARCHAR(30) NOT NULL COMMENT '小程序ID',
   `app_secret` VARCHAR(50) NOT NULL COMMENT '小程序密钥',
-  `sub_mch_id` VARCHAR(20) COMMENT '子商户号', -- 当子商户号为空时为服务商模式
-  `sub_app_id` VARCHAR(30) COMMENT '子商户小程序ID', -- 服务商模式下使用
   `serial_no` VARCHAR(50) NOT NULL COMMENT '商户公钥序列号',
   `private_key` TEXT NOT NULL COMMENT '商户私钥',
   `wechat_serial_no` VARCHAR(50) NOT NULL COMMENT '微信公钥序列号',
   `wechat_public_key` TEXT NOT NULL COMMENT '微信公钥',
   `api_v3_key` VARCHAR(50) NOT NULL COMMENT '微信apiV3Key',
+  `type` TINYINT UNSIGNED NOT NULL COMMENT '通道类型', -- 直连通道或服务商通道
   `created_time` DATETIME COMMENT '创建时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY  `uk_wechat_param_pipelineId` (`pipeline_id`) USING BTREE
@@ -470,8 +469,8 @@ CREATE TABLE `upay_wechat_param` (
 -- --------------------------------------------------------------------
 -- 银企直连支付通道申请数据模型
 -- --------------------------------------------------------------------
-DROP TABLE IF EXISTS `upay_bank_direct_payment`;
-CREATE TABLE `upay_bank_direct_payment` (
+DROP TABLE IF EXISTS `upay_bank_payment`;
+CREATE TABLE `upay_bank_payment` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `mch_id` BIGINT NOT NULL COMMENT '商户ID',
   `trade_id` VARCHAR(40) NOT NULL COMMENT '交易ID',
@@ -487,7 +486,7 @@ CREATE TABLE `upay_bank_direct_payment` (
   `out_trade_no` VARCHAR(40) COMMENT '通道流水号',
   `state` TINYINT UNSIGNED NOT NULL COMMENT '状态',
   `retry_times` INTEGER UNSIGNED NOT NULL COMMENT '重试次数',
-  `notify_url` VARCHAR(128) COMMENT '业务回调地址',
+  `notify_uri` VARCHAR(128) COMMENT '业务回调地址',
   `notify_state` INTEGER UNSIGNED COMMENT '通知状态',
   `description` VARCHAR(128) COMMENT '备注',
   `version` INTEGER UNSIGNED NOT NULL COMMENT '数据版本号',
@@ -505,8 +504,8 @@ CREATE TABLE `upay_bank_direct_payment` (
 -- --------------------------------------------------------------------
 -- 银行聚合支付通道申请数据模型 - 银行扫码支付，银行微信下单支付: 当前贵阳建行使用
 -- --------------------------------------------------------------------
-DROP TABLE IF EXISTS `upay_bank_online_payment`;
-CREATE TABLE `upay_bank_online_payment` (
+DROP TABLE IF EXISTS `upay_online_payment`;
+CREATE TABLE `upay_online_payment` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `mch_id` BIGINT NOT NULL COMMENT '商户ID',
   `trade_id` VARCHAR(40) NOT NULL COMMENT '交易ID',
@@ -524,7 +523,7 @@ CREATE TABLE `upay_bank_online_payment` (
   `out_trade_no` VARCHAR(40) COMMENT '通道流水号',
   `state` TINYINT UNSIGNED NOT NULL COMMENT '状态',
   `retry_times` INTEGER UNSIGNED NOT NULL COMMENT '重试次数',
-  `notify_url` VARCHAR(128) COMMENT '业务回调地址',
+  `notify_uri` VARCHAR(128) COMMENT '业务回调地址',
   `notify_state` INTEGER UNSIGNED COMMENT '通知状态',
   `description` VARCHAR(128) COMMENT '备注',
   `version` INTEGER UNSIGNED NOT NULL COMMENT '数据版本号',
@@ -557,14 +556,14 @@ CREATE TABLE `upay_wechat_payment` (
   `name` VARCHAR(40) NOT NULL COMMENT '账号名称',
   `goods` VARCHAR(128) NOT NULL COMMENT '商品描述',
   `amount` BIGINT NOT NULL COMMENT '申请金额-分',
-  `prepay_id` VARCHAR(128) COMMENT '预支付ID', -- 微信预支付ID或二维码链接
-  `payer_id` VARCHAR(40) COMMENT '支付方OpenId',
+  `object_id` VARCHAR(128) COMMENT '操作对象', -- prepareId，二维码，或退款时的原单号
+  `open_id` VARCHAR(40) COMMENT '支付方OpenId',
   `pay_time` DATETIME COMMENT '支付时间',
   `out_trade_no` VARCHAR(40) COMMENT '微信流水号',
   `state` TINYINT UNSIGNED NOT NULL COMMENT '申请状态',
-  `notify_url` VARCHAR(128) COMMENT '业务回调链接',
+  `notify_uri` VARCHAR(128) COMMENT '业务回调链接',
+  `description` VARCHAR(256) COMMENT '交易备注',
   `version` INTEGER UNSIGNED NOT NULL COMMENT '数据版本号',
-  `description` VARCHAR(256) COMMENT '备注',
   `created_time` DATETIME COMMENT '创建时间',
   `modified_time` DATETIME COMMENT '修改时间',
   PRIMARY KEY (`id`),

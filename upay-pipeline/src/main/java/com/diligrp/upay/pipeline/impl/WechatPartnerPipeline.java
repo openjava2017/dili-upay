@@ -25,7 +25,7 @@ public class WechatPartnerPipeline extends WechatPipeline {
 
     @Override
     public WechatHttpClient getClient() {
-        AssertUtils.notNull(client, "微信支付通道配置错误");
+        AssertUtils.notNull(client, "微信支付通道客户端未配置");
         return client;
     }
 }

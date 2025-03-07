@@ -1,11 +1,13 @@
 package com.diligrp.upay.pipeline.domain;
 
+import com.diligrp.upay.shared.domain.ContainerSupport;
+
 import java.time.LocalDateTime;
 
 /**
  * 微信退款结果领域模型
  */
-public class WechatRefundResponse {
+public class WechatRefundResponse extends ContainerSupport {
     // 商户退款单号
     private String refundId;
     // 微信退款单号

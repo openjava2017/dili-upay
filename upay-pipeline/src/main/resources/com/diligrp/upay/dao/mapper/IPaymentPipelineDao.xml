@@ -23,13 +23,12 @@
         <result column="mch_id" property="mchId"/>
         <result column="app_id" property="appId"/>
         <result column="app_secret" property="appSecret"/>
-        <result column="sub_mch_id" property="subMchId"/>
-        <result column="sub_app_id" property="subAppId"/>
         <result column="serial_no" property="serialNo"/>
         <result column="private_key" property="privateKey"/>
         <result column="wechat_serial_no" property="wechatSerialNo"/>
         <result column="wechat_public_key" property="wechatPublicKey"/>
         <result column="api_v3_key" property="apiV3Key"/>
+        <result column="type" property="type"/>
         <result column="created_time" property="createdTime"/>
     </resultMap>
 
