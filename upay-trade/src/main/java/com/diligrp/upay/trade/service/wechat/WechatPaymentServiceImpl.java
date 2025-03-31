@@ -1,6 +1,8 @@
 package com.diligrp.upay.trade.service.wechat;
 
 import com.diligrp.upay.core.domain.ApplicationPermit;
+import com.diligrp.upay.core.domain.MerchantPermit;
+import com.diligrp.upay.core.util.DataPartition;
 import com.diligrp.upay.pipeline.dao.IWechatPaymentDao;
 import com.diligrp.upay.pipeline.domain.WechatPaymentResponse;
 import com.diligrp.upay.pipeline.domain.WechatPrepayResponse;
@@ -8,6 +10,7 @@ import com.diligrp.upay.pipeline.domain.WechatRefundResponse;
 import com.diligrp.upay.pipeline.model.WechatPayment;
 import com.diligrp.upay.shared.ErrorCode;
 import com.diligrp.upay.shared.util.ObjectUtils;
+import com.diligrp.upay.trade.dao.ITradeOrderDao;
 import com.diligrp.upay.trade.domain.wechat.WechatPaymentResult;
 import com.diligrp.upay.trade.domain.wechat.WechatPrepayDTO;
 import com.diligrp.upay.trade.domain.wechat.WechatRefundDTO;
@@ -44,10 +47,19 @@ public class WechatPaymentServiceImpl implements IWechatPaymentService {
     private IWechatTradeService wechatTradeService;
 
     @Resource
+    private ITradeOrderDao tradeOrderDao;
+
+    @Resource
     private IWechatPaymentDao wechatPaymentDao;
 
     @Override
     public WechatPrepayResponse prepay(ApplicationPermit application, WechatPrepayDTO request) {
+        MerchantPermit merchant = application.getMerchant();
+        DataPartition partition = DataPartition.strategy(merchant.parentMchId());
+        if (tradeOrderDao.findByOutTradeNo(partition, merchant.getMchId(), request.getOutTradeNo()).isPresent()) {
+            throw new TradePaymentException(ErrorCode.OBJECT_ALREADY_EXISTS, "Duplicate outTradeNo");
+        }
+
         if (TradeType.ONLINE_DEPOSIT.equalTo(request.getType())) {
             return wechatDepositService.prepay(application, request);
         } else if (TradeType.ONLINE_FEE.equalTo(request.getType())) {

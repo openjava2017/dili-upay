@@ -7,19 +7,22 @@ import java.time.LocalDateTime;
  */
 public class WechatPaymentResult {
     // 支付ID
-    protected String paymentId;
+    private String paymentId;
     // 支付状态
-    protected Integer state;
-    // 微信状态码
-    protected String stateCode;
+    private Integer state;
+    // 业务系统订单号
+    private String outTradeNo;
     // 发生时间
-    protected LocalDateTime when;
+    private LocalDateTime when;
+    // 交易描述
+    private String message;
 
-    public WechatPaymentResult(String paymentId, int state, String stateCode, LocalDateTime when) {
+    public WechatPaymentResult(String paymentId, int state, String outTradeNo, LocalDateTime when, String message) {
         this.paymentId = paymentId;
         this.state = state;
-        this.stateCode = stateCode;
+        this.outTradeNo = outTradeNo;
         this.when = when;
+        this.message = message;
     }
 
     public String getPaymentId() {
@@ -30,11 +33,15 @@ public class WechatPaymentResult {
         return state;
     }
 
-    public String getStateCode() {
-        return stateCode;
+    public String getOutTradeNo() {
+        return outTradeNo;
     }
 
     public LocalDateTime getWhen() {
         return when;
+    }
+
+    public String getMessage() {
+        return message;
     }
 }

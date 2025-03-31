@@ -1,6 +1,9 @@
 package com.diligrp.upay.trade.message;
 
+import com.diligrp.upay.shared.service.ServiceEndpointSupport;
 import com.diligrp.upay.shared.service.ThreadPoolService;
+import com.diligrp.upay.shared.util.JsonUtils;
+import com.diligrp.upay.trade.domain.wechat.WechatPaymentResult;
 import jakarta.annotation.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,5 +48,32 @@ public class MessageQueueService {
                 LOG.error(String.format("Failed to send wechat pipeline order scan request for %s", paymentId), ex);
             }
         });
+    }
+
+    /**
+     * 通知业务系统微信支付通道处理结果
+     */
+    public void sendWechatNotifyMessage(String uri, WechatPaymentResult payload) {
+        ThreadPoolService.getIoThreadPoll().submit(() -> {
+            try {
+                String body = JsonUtils.toJsonString(payload);
+                LOG.info("Notifying wechat pipeline payment result: {}", body);
+                new NotifyHttpClient(uri).send(body);
+            } catch (Exception ex) {
+                LOG.error("Failed to notify wechat pipeline result", ex);
+            }
+        });
+    }
+
+    private class NotifyHttpClient extends ServiceEndpointSupport {
+        private String baseUrl;
+
+        public NotifyHttpClient(String baseUrl) {
+            this.baseUrl =  baseUrl;
+        }
+
+        public HttpResult send(String body) {
+            return send(baseUrl, body);
+        }
     }
 }

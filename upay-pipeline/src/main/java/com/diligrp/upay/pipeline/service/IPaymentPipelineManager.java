@@ -16,7 +16,7 @@ public interface IPaymentPipelineManager {
     /**
      * 获取商户配置的指定类型的支付通道
      */
-    <T extends PaymentPipeline> T findPipeline(long mchId, Class<T> type);
+    <T extends PaymentPipeline> T findPipelineByMchId(long mchId, Class<T> type);
 
     /**
      * 获取商户配置的指定类型的支付通道

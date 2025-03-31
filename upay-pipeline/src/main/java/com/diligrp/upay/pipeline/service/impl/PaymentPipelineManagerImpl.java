@@ -70,7 +70,7 @@ public class PaymentPipelineManagerImpl extends LifeCycle implements IPaymentPip
     }
 
     @Override
-    public <T extends com.diligrp.upay.pipeline.core.PaymentPipeline> T findPipeline(long mchId, Class<T> type) {
+    public <T extends com.diligrp.upay.pipeline.core.PaymentPipeline> T findPipelineByMchId(long mchId, Class<T> type) {
         List<T> allPipelines = pipelines.values().stream().filter(p -> p.mchId() == mchId)
             .filter(p -> type.isAssignableFrom(p.getClass())).map(p -> type.cast(p)).collect(Collectors.toList());
         if (pipelines.isEmpty()) {

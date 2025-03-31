@@ -100,7 +100,7 @@ public abstract class WechatPipeline extends PaymentPipeline<WechatPipeline.Wech
             String message = String.format("%s\n%s\n%s\n%s\n", appId, timeStamp, nonceStr, packet);
             String paySign = WechatSignatureUtils.signature(message, getClient().getWechatConfig().getPrivateKey());
             String signType = WechatConstants.RSA_ALGORITHM;
-            return JsApiPrepayResponse.of(request.getPaymentId(), timeStamp, nonceStr, packet, signType, paySign);
+            return JsApiPrepayResponse.of(request.getPaymentId(), prepayId, timeStamp, nonceStr, signType, paySign);
         } catch (PaymentServiceException pse) {
             throw pse;
         } catch (Exception ex) {

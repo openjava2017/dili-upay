@@ -42,4 +42,10 @@
     <select id="findByPaymentId" parameterType="long" resultMap="WechatPaymentMap">
         SELECT * FROM upay_wechat_payment WHERE payment_id = #{paymentId}
     </select>
+
+    <update id="compareAndSetState" parameterType="com.diligrp.upay.pipeline.domain.wechat.WechatPaymentDTO">
+        UPDATE upay_wechat_payment SET out_trade_no = #{outTradeNo}, open_id = #{openId}, pay_time = #{payTime}, state = #{state},
+                                       description = #{description}, version = version + 1, modified_time = #{modifiedTime}
+        WHERE payment_id = #{paymentId} AND version = #{version}
+    </update>
 </mapper>
