@@ -37,7 +37,6 @@ public class WechatConstants {
     public static String NOTIFY_EVENT_TYPE = "TRANSACTION.SUCCESS";
     public static String REFUND_EVENT_TYPE = "REFUND.SUCCESS";
 
-
     // 支付状态常量列表
     public static final String STATE_SUCCESS = "SUCCESS"; // 支付成功
     public static final String STATE_REFUND = "REFUND"; // 转入退款
@@ -53,5 +52,7 @@ public class WechatConstants {
     public static final String REFUND_PROCESSING = "PROCESSING"; // 退款处理中
     public static final String REFUND_ABNORMAL = "ABNORMAL"; // 退款异常
 
-
+    public static final String PARAM_PIPELINE = "pipelineId";
+    public static final String PAYMENT_NOTIFY_URI = "/wechat/payment/notify.do";
+    public static final String REFUND_NOTIFY_URI = "/wechat/refund/notify.do";
 }

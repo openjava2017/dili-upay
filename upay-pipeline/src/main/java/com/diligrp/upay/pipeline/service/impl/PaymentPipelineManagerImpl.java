@@ -1,12 +1,12 @@
 package com.diligrp.upay.pipeline.service.impl;
 
 import com.diligrp.upay.pipeline.core.IPipeline;
+import com.diligrp.upay.pipeline.core.PaymentPipeline;
 import com.diligrp.upay.pipeline.core.WechatPipeline;
 import com.diligrp.upay.pipeline.dao.IPaymentPipelineDao;
 import com.diligrp.upay.pipeline.exception.PaymentPipelineException;
 import com.diligrp.upay.pipeline.impl.WechatDirectPipeline;
 import com.diligrp.upay.pipeline.impl.WechatPartnerPipeline;
-import com.diligrp.upay.pipeline.model.PaymentPipeline;
 import com.diligrp.upay.pipeline.model.WechatParam;
 import com.diligrp.upay.pipeline.service.IPaymentPipelineManager;
 import com.diligrp.upay.pipeline.type.PipelineType;
@@ -35,8 +35,8 @@ public class PaymentPipelineManagerImpl extends LifeCycle implements IPaymentPip
     private IPaymentPipelineDao paymentPipelineDao;
 
     protected void doStart() throws Exception {
-        List<PaymentPipeline> pipelines = paymentPipelineDao.listPaymentPipelines();
-        for (PaymentPipeline pipeline : pipelines) {
+        List<com.diligrp.upay.pipeline.model.PaymentPipeline> pipelines = paymentPipelineDao.listPaymentPipelines();
+        for (com.diligrp.upay.pipeline.model.PaymentPipeline pipeline : pipelines) {
             if (PipelineType.WECHAT_PAY.equalTo(pipeline.getType())) {
                 Optional<WechatParam> paramOpt = paymentPipelineDao.findWechatParam(pipeline.getPipelineId());
                 if (paramOpt.isPresent()) {
@@ -64,13 +64,13 @@ public class PaymentPipelineManagerImpl extends LifeCycle implements IPaymentPip
     }
 
     @Override
-    public <T extends com.diligrp.upay.pipeline.core.PaymentPipeline> void registerPaymentPipeline(T pipeline) {
+    public <T extends PaymentPipeline> void registerPaymentPipeline(T pipeline) {
         pipelines.put(pipeline.pipelineId(), pipeline);
         LOG.info("{} payment pipeline registered", pipeline.name());
     }
 
     @Override
-    public <T extends com.diligrp.upay.pipeline.core.PaymentPipeline> T findPipelineByMchId(long mchId, Class<T> type) {
+    public <T extends PaymentPipeline> T findPipelineByMchId(long mchId, Class<T> type) {
         List<T> allPipelines = pipelines.values().stream().filter(p -> p.mchId() == mchId)
             .filter(p -> type.isAssignableFrom(p.getClass())).map(p -> type.cast(p)).collect(Collectors.toList());
         if (pipelines.isEmpty()) {
@@ -83,14 +83,14 @@ public class PaymentPipelineManagerImpl extends LifeCycle implements IPaymentPip
     }
 
     @Override
-    public <T extends com.diligrp.upay.pipeline.core.PaymentPipeline> List<T> listPipelines(long mchId, Class<T> type) {
+    public <T extends PaymentPipeline> List<T> listPipelines(long mchId, Class<T> type) {
         return pipelines.values().stream().filter(p -> p.mchId() == mchId)
             .filter(p -> type.isAssignableFrom(p.getClass())).map(p -> type.cast(p)).collect(Collectors.toList());
     }
 
     @Override
-    public <T extends com.diligrp.upay.pipeline.core.PaymentPipeline> T findPipelineById(long pipelineId) {
-        return pipelines.values().stream().filter(p -> p.pipelineId() == pipelineId).map(p -> (T)p).findAny()
-            .orElseThrow(() -> new PaymentPipelineException(ErrorCode.OBJECT_NOT_FOUND, "系统不支持该支付通道"));
+    public <T extends PaymentPipeline> T findPipelineById(long pipelineId, Class<T> type) {
+        return pipelines.values().stream().filter(p -> p.pipelineId() == pipelineId && type.isAssignableFrom(p.getClass()))
+            .map(p -> (T)p).findAny().orElseThrow(() -> new PaymentPipelineException(ErrorCode.OBJECT_NOT_FOUND, "系统不支持该支付通道"));
     }
 }

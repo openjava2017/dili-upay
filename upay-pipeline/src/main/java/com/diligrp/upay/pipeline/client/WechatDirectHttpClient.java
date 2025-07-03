@@ -180,7 +180,7 @@ public class WechatDirectHttpClient extends WechatHttpClient {
             Map<String, Object> response = JsonUtils.fromJsonString(result.responseText, Map.class);
             LocalDateTime when = DateUtils.parseDateTime((String) response.get("success_time"), WechatConstants.RFC3339_FORMAT);
             return WechatRefundResponse.of((String) response.get("out_refund_no"), (String) response.get("refund_id"),
-                when, (String) response.get("status"), (String) response.get("user_received_account"));
+                when, (String) response.get("status"), (String) response.get("status"));
         } else {
             LOG.info("send wechat refund failed: {}", result.statusCode);
             ErrorMessage message = JsonUtils.fromJsonString(result.responseText, ErrorMessage.class);

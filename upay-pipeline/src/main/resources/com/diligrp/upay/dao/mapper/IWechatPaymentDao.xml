@@ -48,4 +48,80 @@
                                        description = #{description}, version = version + 1, modified_time = #{modifiedTime}
         WHERE payment_id = #{paymentId} AND version = #{version}
     </update>
+
+    <select id="listWechatStatements" parameterType="com.diligrp.upay.pipeline.domain.wechat.WechatStatementQuery" resultType="com.diligrp.upay.pipeline.domain.wechat.WechatStatementDTO">
+        SELECT
+            um.name AS mchName, uwp.type, uwp.payment_id AS paymentId, uwp.pay_type AS payType, uwp.pipeline_id AS pipelineId,
+            uua.customer_id AS customerId, uwp.name, uwp.goods, uwp.amount, uwp.object_id AS objectId, uwp.open_id AS openId,
+            uwp.pay_time AS payTime, uwp.out_trade_no AS outTradeNo, uwp.state, uwp.description, uwp.created_time AS createdTime
+        FROM
+            upay_wechat_payment uwp
+            LEFT JOIN upay_trade_order uto ON uwp.trade_id = uto.trade_id
+            LEFT JOIN upay_user_account uua ON uwp.account_id = uua.account_id
+            LEFT JOIN upay_merchant um ON uwp.mch_id = um.id
+        WHERE
+            uwp.mch_id = #{mchId}
+            <if test="type != null">
+                AND uwp.type = #{type}
+            </if>
+            <if test="customerId != null">
+                AND uua.customer_id = #{customerId}
+            </if>
+            <if test="paymentId != null">
+                AND uwp.payment_id = #{paymentId}
+            </if>
+            <if test="outTradeNo != null">
+                AND uto.out_trade_no = #{outTradeNo}
+            </if>
+            <if test="pipelineId != null">
+                AND uwp.pipeline_id = #{pipelineId}
+            </if>
+            <if test="state != null">
+                AND uwp.state = #{state}
+            </if>
+            <if test="startDate != null">
+                <![CDATA[AND uwp.created_time >= #{startDate}]]>
+            </if>
+            <if test="endDate != null">
+                <![CDATA[AND uwp.created_time <= #{endDate}]]>
+            </if>
+        ORDER BY uwp.id DESC
+        LIMIT #{start}, #{limit}
+    </select>
+
+    <select id="sumWechatStatements" parameterType="com.diligrp.upay.pipeline.domain.wechat.WechatStatementQuery" resultType="com.diligrp.upay.pipeline.domain.wechat.SumWechatStatement">
+        SELECT
+            <![CDATA[COUNT(*) AS total, SUM(CASE WHEN uwp.amount > 0 THEN uwp.amount ELSE 0 END) AS income, SUM(CASE WHEN uwp.amount < 0 THEN uwp.amount ELSE 0 END) AS output]]>
+        FROM
+            upay_wechat_payment uwp
+            LEFT JOIN upay_trade_order uto ON uwp.trade_id = uto.trade_id
+            LEFT JOIN upay_user_account uua ON uwp.account_id = uua.account_id
+            LEFT JOIN upay_merchant um ON uwp.mch_id = um.id
+        WHERE
+            uwp.mch_id = #{mchId}
+            <if test="type != null">
+                AND uwp.type = #{type}
+            </if>
+            <if test="customerId != null">
+                AND uua.customer_id = #{customerId}
+            </if>
+            <if test="paymentId != null">
+                AND uwp.payment_id = #{paymentId}
+            </if>
+            <if test="outTradeNo != null">
+                AND uto.out_trade_no = #{outTradeNo}
+            </if>
+            <if test="pipelineId != null">
+                AND uwp.pipeline_id = #{pipelineId}
+            </if>
+            <if test="state != null">
+                AND uwp.state = #{state}
+            </if>
+            <if test="startDate != null">
+                <![CDATA[AND uwp.created_time >= #{startDate}]]>
+            </if>
+            <if test="endDate != null">
+                <![CDATA[AND uwp.created_time <= #{endDate}]]>
+            </if>
+    </select>
 </mapper>

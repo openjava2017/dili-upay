@@ -1,5 +1,6 @@
 package com.diligrp.upay.trade.message;
 
+import com.diligrp.upay.shared.util.JsonUtils;
 import com.diligrp.upay.trade.service.IWechatPaymentService;
 import jakarta.annotation.Resource;
 import org.slf4j.Logger;
@@ -33,10 +34,10 @@ public class MessageConsumeService {
         try {
             String body = new String(packet, charSet);
             LOG.info("Receiving pipeline async task request: {}", body);
-            TaskMessage task = TaskMessage.from(body);
-            if (task.getType() == TaskMessage.TYPE_WECHAT_PREPAY_SCAN) { // 十分钟关闭微信订单
+            TaskMessage task = JsonUtils.fromJsonString(body, TaskMessage.class);
+            if (task.getType() == TaskMessage.TYPE_WECHAT_PREPAY_SCAN) { // 十分钟兜底处理微信预支付订单
                 wechatPaymentService.scanWechatPrepayOrder(task.getPayload());
-            } else if (task.getType() == TaskMessage.TYPE_WECHAT_REFUND_SCAN) { // 扫码充值结果查询
+            } else if (task.getType() == TaskMessage.TYPE_WECHAT_REFUND_SCAN) { // 十分钟兜底处理微信退款订单
                 wechatPaymentService.scanWechatRefundOrder(task.getPayload());
             }
         } catch (Exception ex) {

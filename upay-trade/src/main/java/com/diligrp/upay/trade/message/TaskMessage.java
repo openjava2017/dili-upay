@@ -1,7 +1,5 @@
 package com.diligrp.upay.trade.message;
 
-import com.diligrp.upay.shared.util.JsonUtils;
-
 /**
  * 异步消息模型
  */
@@ -40,20 +38,5 @@ public class TaskMessage {
         taskMessage.payload = payload;
         taskMessage.params = params;
         return taskMessage;
-    }
-
-    /**
-     * 序列化消息
-     */
-    @Override
-    public String toString() {
-        return JsonUtils.toJsonString(this);
-    }
-
-    /**
-     * 反序列化消息
-     */
-    public static TaskMessage from(String message) {
-        return JsonUtils.fromJsonString(message, TaskMessage.class);
     }
 }
