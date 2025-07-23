@@ -9,7 +9,9 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
 import java.net.ConnectException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.*;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -89,8 +91,8 @@ public abstract class ServiceEndpointSupport {
         if (params != null && params.length > 0) {
             // [key1, value1, key2, value2] -> key1=value1&key2=value2
             String body = Arrays.stream(params).filter(p -> p != null)
-                .map(p -> "".concat(p.param).concat("=").concat(p.value))
-                .reduce((key, value) -> "".concat(key).concat("&").concat(value)).get();
+                .map(p -> "".concat(p.param).concat("=").concat(URLEncoder.encode(p.value, StandardCharsets.UTF_8)))
+                .reduce((value1, value2) -> "".concat(value1).concat("&").concat(value2)).get();
             request.POST(HttpRequest.BodyPublishers.ofString(body));
         }
 
