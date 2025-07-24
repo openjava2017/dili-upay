@@ -18,7 +18,7 @@ import java.util.Optional;
 @Repository("wechatPaymentDao")
 public interface IWechatPaymentDao extends MybatisMapperSupport {
 
-    List<PaymentPipeline> insertWechatPayment(WechatPayment payment);
+    void insertWechatPayment(WechatPayment payment);
 
     Optional<WechatPayment> findByPaymentId(String paymentId);
 
