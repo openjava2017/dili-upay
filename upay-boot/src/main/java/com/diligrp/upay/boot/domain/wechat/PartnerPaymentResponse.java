@@ -1,9 +1,9 @@
 package com.diligrp.upay.boot.domain.wechat;
 
 /**
- * 交易结果模型 - 直联模式
+ * 交易结果模型 - 服务商模式
  */
-public class DirectTransactionResponse {
+public class PartnerPaymentResponse {
     // 微信订单号
     private String transaction_id;
     // 商户订单号
@@ -66,15 +66,25 @@ public class DirectTransactionResponse {
     }
 
     public static class Payer {
-        // 用户标识OpenId
-        private String openid;
+        // 服务商下用户OpenId
+        private String sp_openid;
+        // 子商户下用户OpenId
+        private String sub_openid;
 
-        public String getOpenid() {
-            return openid;
+        public String getSp_openid() {
+            return sp_openid;
         }
 
-        public void setOpenid(String openid) {
-            this.openid = openid;
+        public void setSp_openid(String sp_openid) {
+            this.sp_openid = sp_openid;
+        }
+
+        public String getSub_openid() {
+            return sub_openid;
+        }
+
+        public void setSub_openid(String sub_openid) {
+            this.sub_openid = sub_openid;
         }
     }
 }

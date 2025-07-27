@@ -3,7 +3,8 @@ package com.diligrp.upay.trade.message;
 import com.diligrp.upay.shared.service.ServiceEndpointSupport;
 import com.diligrp.upay.shared.service.ThreadPoolService;
 import com.diligrp.upay.shared.util.JsonUtils;
-import com.diligrp.upay.trade.domain.wechat.WechatPaymentResult;
+import com.diligrp.upay.shared.util.ObjectUtils;
+import com.diligrp.upay.trade.Constants;
 import jakarta.annotation.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +33,7 @@ public class MessageQueueService {
      * 发送微信订单扫描信息
      * 创建微信预支付订单成功后，通过MQ延时消息实现十分钟后根据微信支付查询结果，关闭或完成本地支付订单
      */
-    public void sendWechatScanMessage(TaskMessage task) {
+    public void sendWechatScanMessage(MessageEvent task) {
         ThreadPoolService.getIoThreadPoll().submit(() -> {
             try {
                 MessageProperties properties = new MessageProperties();
@@ -44,7 +45,7 @@ public class MessageQueueService {
                 String payload = JsonUtils.toJsonString(task);
                 Message message = new Message(payload.getBytes(StandardCharsets.UTF_8), properties);
                 LOG.info("Sending wechat pipeline order scan request for {}", task.getPayload());
-                rabbitTemplate.send(MessageConstants.PIPELINE_DELAY_EXCHANGE, MessageConstants.PIPELINE_DELAY_KEY, message);
+                rabbitTemplate.send(Constants.PAYMENT_DELAY_EXCHANGE, Constants.PAYMENT_DELAY_KEY, message);
             } catch (Exception ex) {
                 LOG.error(String.format("Failed to send wechat pipeline order scan request for %s", task.getPayload()), ex);
             }
@@ -55,6 +56,9 @@ public class MessageQueueService {
      * 通知业务系统微信支付通道处理结果
      */
     public void sendWechatNotifyMessage(String uri, Object payload) {
+        if (ObjectUtils.isEmpty(uri)) {
+            return;
+        }
         ThreadPoolService.getIoThreadPoll().submit(() -> {
             try {
                 String body = JsonUtils.toJsonString(payload);

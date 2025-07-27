@@ -1,6 +1,5 @@
 package com.diligrp.upay.pipeline.client;
 
-import com.diligrp.upay.pipeline.core.WechatPipeline;
 import com.diligrp.upay.pipeline.domain.*;
 import com.diligrp.upay.pipeline.domain.wechat.WechatCertificate;
 import com.diligrp.upay.pipeline.domain.wechat.WechatConfig;
@@ -17,7 +16,6 @@ import com.diligrp.upay.shared.util.DateUtils;
 import com.diligrp.upay.shared.util.JsonUtils;
 import com.diligrp.upay.shared.util.ObjectUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
-import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,11 +66,11 @@ public class WechatHttpClient extends ServiceEndpointSupport {
         throw new PaymentPipelineException(ErrorCode.OPERATION_NOT_ALLOWED, "支付通道不支持JsApi支付");
     }
 
-    public WechatPaymentResponse queryPrepayResponse(WechatPrepayQuery request) throws Exception {
+    public WechatPaymentResponse queryPrepayResponse(WechatPrepayOrder request) throws Exception {
         throw new PaymentPipelineException(ErrorCode.OPERATION_NOT_ALLOWED, "支付通道不支持此操作");
     }
 
-    public void closePrepayOrder(WechatPrepayClose request) throws Exception {
+    public void closePrepayOrder(WechatPrepayOrder request) throws Exception {
         throw new PaymentPipelineException(ErrorCode.OPERATION_NOT_ALLOWED, "支付通道不支持此操作");
     }
 
@@ -80,7 +78,7 @@ public class WechatHttpClient extends ServiceEndpointSupport {
         throw new PaymentPipelineException(ErrorCode.OPERATION_NOT_ALLOWED, "支付通道不支持此操作");
     }
 
-    public WechatRefundResponse queryRefundOrder(WechatRefundQuery request) throws Exception {
+    public WechatRefundResponse queryRefundOrder(WechatRefundOrder request) throws Exception {
         throw new PaymentPipelineException(ErrorCode.OPERATION_NOT_ALLOWED, "支付通道不支持此操作");
     }
 

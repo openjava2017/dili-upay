@@ -3,7 +3,7 @@ package com.diligrp.upay.trade.message;
 /**
  * 异步消息模型
  */
-public class TaskMessage {
+public class MessageEvent {
     // 10分钟后处理未支付的微信预支付订单
     public static final int TYPE_WECHAT_PREPAY_SCAN = 10;
     // 10分钟后处理未完成的微信退款订单
@@ -28,15 +28,15 @@ public class TaskMessage {
         return params;
     }
 
-    public static TaskMessage of(int type, String payload) {
+    public static MessageEvent of(int type, String payload) {
         return of(type, payload, null);
     }
 
-    public static TaskMessage of(int type, String payload, String params) {
-        TaskMessage taskMessage = new TaskMessage();
-        taskMessage.type = type;
-        taskMessage.payload = payload;
-        taskMessage.params = params;
-        return taskMessage;
+    public static MessageEvent of(int type, String payload, String params) {
+        MessageEvent messageEvent = new MessageEvent();
+        messageEvent.type = type;
+        messageEvent.payload = payload;
+        messageEvent.params = params;
+        return messageEvent;
     }
 }

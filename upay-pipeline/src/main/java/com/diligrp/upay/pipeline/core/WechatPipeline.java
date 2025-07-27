@@ -80,12 +80,12 @@ public abstract class WechatPipeline extends PaymentPipeline<WechatPipeline.Wech
         }
     }
 
-    public NativePrepayResponse sendNativePrepayRequest(WechatPrepayRequest request) {
+    public WechatNativeResponse sendNativePrepayRequest(WechatPrepayRequest request) {
         try {
             String notifyUri = String.format("%s%s?%s=%s", params().notifyBaseUri, WechatConstants.PAYMENT_NOTIFY_URI,
                 WechatConstants.PARAM_PIPELINE, pipelineId());
             String qrCode = getClient().sendNativePrepayRequest(request, notifyUri);
-            return NativePrepayResponse.of(request.getPaymentId(), qrCode);
+            return WechatNativeResponse.of(request.getPaymentId(), qrCode);
         } catch (PaymentServiceException pse) {
             throw pse;
         } catch (Exception ex) {
@@ -94,7 +94,7 @@ public abstract class WechatPipeline extends PaymentPipeline<WechatPipeline.Wech
         }
     }
 
-    public JsApiPrepayResponse sendJsApiPrepayRequest(WechatPrepayRequest request) {
+    public WechatJsApiResponse sendJsApiPrepayRequest(WechatPrepayRequest request) {
         try {
             String notifyUri = String.format("%s%s?%s=%s", params().notifyBaseUri, WechatConstants.PAYMENT_NOTIFY_URI,
                 WechatConstants.PARAM_PIPELINE, pipelineId());
@@ -107,7 +107,7 @@ public abstract class WechatPipeline extends PaymentPipeline<WechatPipeline.Wech
             String message = String.format("%s\n%s\n%s\n%s\n", appId, timeStamp, nonceStr, packet);
             String paySign = WechatSignatureUtils.signature(message, getClient().getWechatConfig().getPrivateKey());
             String signType = WechatConstants.RSA_ALGORITHM;
-            return JsApiPrepayResponse.of(request.getPaymentId(), prepayId, timeStamp, nonceStr, signType, paySign);
+            return WechatJsApiResponse.of(request.getPaymentId(), prepayId, timeStamp, nonceStr, signType, paySign);
         } catch (PaymentServiceException pse) {
             throw pse;
         } catch (Exception ex) {
@@ -116,7 +116,7 @@ public abstract class WechatPipeline extends PaymentPipeline<WechatPipeline.Wech
         }
     }
 
-    public WechatPaymentResponse queryPrepayResponse(WechatPrepayQuery request) {
+    public WechatPaymentResponse queryPrepayResponse(WechatPrepayOrder request) {
         try {
             return getClient().queryPrepayResponse(request);
         } catch (PaymentServiceException pse) {
@@ -127,7 +127,7 @@ public abstract class WechatPipeline extends PaymentPipeline<WechatPipeline.Wech
         }
     }
 
-    public void closePrepayOrder(WechatPrepayClose request) {
+    public void closePrepayOrder(WechatPrepayOrder request) {
         try {
             getClient().closePrepayOrder(request);
         } catch (PaymentServiceException pse) {
@@ -151,7 +151,7 @@ public abstract class WechatPipeline extends PaymentPipeline<WechatPipeline.Wech
         }
     }
 
-    public WechatRefundResponse queryRefundResponse(WechatRefundQuery request) {
+    public WechatRefundResponse queryRefundResponse(WechatRefundOrder request) {
         try {
             return getClient().queryRefundOrder(request);
         } catch (PaymentServiceException pse) {

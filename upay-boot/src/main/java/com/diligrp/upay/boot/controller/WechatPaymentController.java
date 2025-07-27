@@ -1,8 +1,8 @@
 package com.diligrp.upay.boot.controller;
 
-import com.diligrp.upay.boot.domain.wechat.DirectTransactionResponse;
-import com.diligrp.upay.boot.domain.wechat.NotifyRefundResponse;
-import com.diligrp.upay.boot.domain.wechat.PartnerTransactionResponse;
+import com.diligrp.upay.boot.domain.wechat.DirectPaymentResponse;
+import com.diligrp.upay.boot.domain.wechat.RefundNotifyResponse;
+import com.diligrp.upay.boot.domain.wechat.PartnerPaymentResponse;
 import com.diligrp.upay.boot.domain.wechat.WechatNotifyResponse;
 import com.diligrp.upay.boot.util.HttpUtils;
 import com.diligrp.upay.pipeline.core.WechatPipeline;
@@ -42,7 +42,7 @@ public class WechatPaymentController {
     private IPaymentPipelineManager paymentPipelineManager;
 
     /**
-     * 杭州果品微信支付结果通知-服务商模式
+     * 微信支付结果通知
      */
     @RequestMapping(value = "/payment/notify.do")
     public ResponseEntity<NotifyResult> paymentNotify(HttpServletRequest request) {
@@ -116,13 +116,13 @@ public class WechatPaymentController {
         String payload = WechatSignatureUtils.decrypt(resource.getCiphertext(), resource.getNonce(),
             resource.getAssociated_data(), pipeline.getClient().getWechatConfig().getApiV3Key());
         if (pipeline instanceof WechatPartnerPipeline) {
-            PartnerTransactionResponse response = JsonUtils.fromJsonString(payload, PartnerTransactionResponse.class);
+            PartnerPaymentResponse response = JsonUtils.fromJsonString(payload, PartnerPaymentResponse.class);
             LocalDateTime when = DateUtils.parseDateTime(response.getSuccess_time(), WechatConstants.RFC3339_FORMAT);
             String payer = response.getPayer() == null ? null : response.getPayer().getSp_openid();
             return WechatPaymentResponse.of(response.getOut_trade_no(), response.getTransaction_id(), payer, when,
                 response.getTrade_state(), response.getTrade_state_desc());
         } else {
-            DirectTransactionResponse response = JsonUtils.fromJsonString(payload, DirectTransactionResponse.class);
+            DirectPaymentResponse response = JsonUtils.fromJsonString(payload, DirectPaymentResponse.class);
             LocalDateTime when = DateUtils.parseDateTime(response.getSuccess_time(), WechatConstants.RFC3339_FORMAT);
             String payer = response.getPayer() == null ? null : response.getPayer().getOpenid();
             return WechatPaymentResponse.of(response.getOut_trade_no(), response.getTransaction_id(), payer, when,
@@ -134,7 +134,7 @@ public class WechatPaymentController {
         WechatNotifyResponse.Resource resource = notifyResponse.getResource();
         String payload = WechatSignatureUtils.decrypt(resource.getCiphertext(), resource.getNonce(),
             resource.getAssociated_data(), pipeline.getClient().getWechatConfig().getApiV3Key());
-        NotifyRefundResponse response = JsonUtils.fromJsonString(payload, NotifyRefundResponse.class);
+        RefundNotifyResponse response = JsonUtils.fromJsonString(payload, RefundNotifyResponse.class);
         LocalDateTime when = DateUtils.parseDateTime(response.getSuccess_time(), WechatConstants.RFC3339_FORMAT);
         return WechatRefundResponse.of(response.getRefund_id(), response.getOut_refund_no(), when,
             response.getRefund_status(), response.getRefund_status());

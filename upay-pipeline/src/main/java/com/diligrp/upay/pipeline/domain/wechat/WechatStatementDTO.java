@@ -14,7 +14,7 @@ public class WechatStatementDTO {
     private String paymentId;
     // 支付方式
     private Integer payType;
-    // 客户ID
+    // 支付通道ID
     private Long pipelineId;
     // 客户ID
     private Long customerId;

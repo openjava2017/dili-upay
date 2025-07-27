@@ -102,7 +102,8 @@ public class WechatPaymentServiceImpl implements IWechatPaymentService {
     }
 
     @Override
-    public WechatPaymentResult queryPrepayOrder(ApplicationPermit application, String paymentId, String mode) {
+    public WechatPaymentResult queryPrepayOrder(ApplicationPermit application, WechatPrepayOrder order, String mode) {
+        String paymentId = order.getPaymentId();
         MerchantPermit merchant = application.getMerchant();
         DataPartition partition = DataPartition.strategy(merchant.parentMchId());
         Optional<WechatPayment> paymentOpt = wechatPaymentDao.findByPaymentId(paymentId);
@@ -116,10 +117,9 @@ public class WechatPaymentServiceImpl implements IWechatPaymentService {
         LOG.debug("Query wechat prepay order[{}-{}] state...", paymentId, payment.getState());
         // 微信支付通知较为及时和安全，非特殊情况可使用offline模式；一些本地状态与微信状态不一致的"异常订单"可使用online模式同步状态
         if (PaymentState.PENDING.equalTo(payment.getState()) && "online".equalsIgnoreCase(mode)) {
-            WechatPipeline pipeline = paymentPipelineManager.findPipelineByMchId(merchant.getMchId(), WechatPipeline.class);
-            WechatPrepayQuery request = WechatPrepayQuery.of(paymentId);
-            request.attach(WechatMerchant.of(payment.getWxMchId(), payment.getAppId())); // 服务商模式还需子商户ID
-            WechatPaymentResponse response = pipeline.queryPrepayResponse(request);
+            WechatPipeline pipeline = paymentPipelineManager.findPipelineById(payment.getPipelineId(), WechatPipeline.class);
+            order.attach(WechatMerchant.of(payment.getWxMchId(), payment.getAppId())); // 服务商模式还需子商户ID
+            WechatPaymentResponse response = pipeline.queryPrepayResponse(order);
             PaymentState state = WechatStateUtils.getPaymentState(response.getState());
             return new WechatPaymentResult(paymentId, state.getCode(), trade.getOutTradeNo(), response.getWhen(), response.getMessage());
         }
@@ -138,11 +138,13 @@ public class WechatPaymentServiceImpl implements IWechatPaymentService {
         }
         LOG.debug("Closing wechat prepay order: {}:{}", paymentId, payment.getState());
 
+        WechatPrepayOrder order = WechatPrepayOrder.of(paymentId);
+        order.attach(payment);
         TradeType tradeType = TradeType.getType(payment.getType()).get();
         switch (tradeType) {
-            case ONLINE_DEPOSIT -> wechatDepositService.closePrepayOrder(payment);
-            case ONLINE_FEE -> wechatFeeService.closePrepayOrder(payment);
-            case ONLINE_TRADE -> wechatTradeService.closePrepayOrder(payment);
+            case ONLINE_DEPOSIT -> wechatDepositService.closePrepayOrder(order);
+            case ONLINE_FEE -> wechatFeeService.closePrepayOrder(order);
+            case ONLINE_TRADE -> wechatTradeService.closePrepayOrder(order);
             default -> throw new TradePaymentException(ErrorCode.OPERATION_NOT_ALLOWED, "不能关闭微信订单: 不支持的交易类型");
         }
     }
@@ -186,8 +188,8 @@ public class WechatPaymentServiceImpl implements IWechatPaymentService {
     }
 
     @Override
-    public WechatRefundResult queryRefundOrder(ApplicationPermit application, String refundId, String mode) {
-        MerchantPermit merchant = application.getMerchant();
+    public WechatRefundResult queryRefundOrder(ApplicationPermit application, WechatRefundOrder order, String mode) {
+        String refundId = order.getRefundId();
         Optional<WechatPayment> refundOpt = wechatPaymentDao.findByPaymentId(refundId);
         WechatPayment refund = refundOpt.orElseThrow(() -> new TradePaymentException(ErrorCode.OBJECT_NOT_FOUND, "微信退款订单不存在"));
         Optional<WechatPayment> paymentOpt = wechatPaymentDao.findByPaymentId(refund.getObjectId());
@@ -199,10 +201,9 @@ public class WechatPaymentServiceImpl implements IWechatPaymentService {
         LOG.debug("Query wechat refund order[{}-{}] state...", refundId, refund.getState());
         // 微信支付通知较为及时和安全，非特殊情况可使用offline模式；一些本地状态与微信状态不一致的"异常订单"可使用online模式同步状态
         if (PaymentState.PENDING.equalTo(refund.getState()) && "online".equalsIgnoreCase(mode)) {
-            WechatPipeline pipeline = paymentPipelineManager.findPipelineByMchId(merchant.getMchId(), WechatPipeline.class);
-            WechatRefundQuery request = WechatRefundQuery.of(refundId);
-            request.attach(WechatMerchant.of(refund.getWxMchId(), refund.getAppId())); // 服务商模式还需子商户ID
-            WechatRefundResponse response = pipeline.queryRefundResponse(request);
+            WechatPipeline pipeline = paymentPipelineManager.findPipelineById(refund.getPipelineId(), WechatPipeline.class);
+            order.attach(WechatMerchant.of(refund.getWxMchId(), refund.getAppId())); // 服务商模式还需子商户ID
+            WechatRefundResponse response = pipeline.queryRefundResponse(order);
             PaymentState state = WechatStateUtils.getRefundState(response.getState());
             return new WechatRefundResult(refundId, payment.getPaymentId(), state.getCode(), response.getWhen(), response.getMessage());
         }
@@ -245,7 +246,8 @@ public class WechatPaymentServiceImpl implements IWechatPaymentService {
     }
 
     @Override
-    public void scanWechatPrepayOrder(String paymentId) {
+    public void scanWechatPrepayOrder(WechatPrepayOrder order) {
+        String paymentId = order.getPaymentId();
         LOG.debug("scanPrepayOrder: processing wechat prepay order {}", paymentId);
         Optional<WechatPayment> paymentOpt = wechatPaymentDao.findByPaymentId(paymentId);
         WechatPayment payment = paymentOpt.orElseThrow(() -> new TradePaymentException(ErrorCode.OBJECT_NOT_FOUND, "微信订单不存在"));
@@ -254,20 +256,18 @@ public class WechatPaymentServiceImpl implements IWechatPaymentService {
         }
 
         WechatPipeline pipeline = paymentPipelineManager.findPipelineById(payment.getPipelineId(), WechatPipeline.class);
-        WechatPrepayQuery request = WechatPrepayQuery.of(paymentId);
-        request.attach(WechatMerchant.of(payment.getWxMchId(), payment.getAppId())); // 服务商模式还需子商户ID
-        WechatPaymentResponse response = pipeline.queryPrepayResponse(request);
+        order.attach(WechatMerchant.of(payment.getWxMchId(), payment.getAppId())); // 服务商模式还需子商户ID
+        WechatPaymentResponse response = pipeline.queryPrepayResponse(order);
         if (WechatStateUtils.isPendingState(response.getState())) {
             try {
-                WechatPrepayClose close = WechatPrepayClose.of(paymentId);
-                close.attach(WechatMerchant.of(payment.getWxMchId(), payment.getAppId()));
-                pipeline.closePrepayOrder(close);
+                order.attach(WechatMerchant.of(payment.getWxMchId(), payment.getAppId()));
+                pipeline.closePrepayOrder(order);
                 LOG.debug("scanPrepayOrder: close wechat prepay order {}", paymentId);
+                response = WechatPaymentResponse.of(response.getPaymentId(), response.getOutTradeNo(), response.getOpenId(),
+                    response.getWhen(), WechatConstants.STATE_CLOSED, "自动关闭超时的微信订单");
             } catch (Exception ex) {
                 LOG.error("scanPrepayOrder: close wechat prepare order exception", ex);
             }
-            response = WechatPaymentResponse.of(response.getPaymentId(), response.getOutTradeNo(), response.getOpenId(),
-                response.getWhen(), WechatConstants.STATE_CLOSED, "自动关闭超时的微信订单");
         }
 
         TradeType tradeType = TradeType.getType(payment.getType()).get();
@@ -280,7 +280,8 @@ public class WechatPaymentServiceImpl implements IWechatPaymentService {
     }
 
     @Override
-    public void scanWechatRefundOrder(String refundId) {
+    public void scanWechatRefundOrder(WechatRefundOrder order) {
+        String refundId = order.getRefundId();
         LOG.debug("scanRefundOrder: processing wechat refund order {}", refundId);
         Optional<WechatPayment> refundOpt = wechatPaymentDao.findByPaymentId(refundId);
         WechatPayment refund = refundOpt.orElseThrow(() -> new TradePaymentException(ErrorCode.OBJECT_NOT_FOUND, "微信退款订单不存在"));
@@ -291,9 +292,8 @@ public class WechatPaymentServiceImpl implements IWechatPaymentService {
         Optional<WechatPayment> paymentOpt = wechatPaymentDao.findByPaymentId(refund.getObjectId());
         WechatPayment payment = paymentOpt.orElseThrow(() -> new TradePaymentException(ErrorCode.OBJECT_NOT_FOUND, "原微信订单不存在"));
         WechatPipeline pipeline = paymentPipelineManager.findPipelineById(refund.getPipelineId(), WechatPipeline.class);
-        WechatRefundQuery request = WechatRefundQuery.of(refundId);
-        request.attach(WechatMerchant.of(refund.getWxMchId(), refund.getAppId())); // 服务商模式还需子商户ID
-        WechatRefundResponse response = pipeline.queryRefundResponse(request);
+        order.attach(WechatMerchant.of(refund.getWxMchId(), refund.getAppId())); // 服务商模式还需子商户ID
+        WechatRefundResponse response = pipeline.queryRefundResponse(order);
         response.attach("refund", refund).attach("payment", payment);
 
         TradeType tradeType = TradeType.getType(payment.getType()).get();

@@ -35,7 +35,7 @@ import com.diligrp.upay.trade.domain.wechat.WechatRefundDTO;
 import com.diligrp.upay.trade.domain.wechat.WechatRefundResult;
 import com.diligrp.upay.trade.exception.TradePaymentException;
 import com.diligrp.upay.trade.message.MessageQueueService;
-import com.diligrp.upay.trade.message.TaskMessage;
+import com.diligrp.upay.trade.message.MessageEvent;
 import com.diligrp.upay.trade.model.PaymentFee;
 import com.diligrp.upay.trade.model.RefundPayment;
 import com.diligrp.upay.trade.model.TradeOrder;
@@ -108,12 +108,12 @@ public class WechatFeeServiceImpl implements IWechatFeeService {
         MerchantPermit merchant = application.getMerchant();
         WechatPipeline pipeline = paymentPipelineManager.findPipelineByMchId(merchant.getMchId(), WechatPipeline.class);
         if (pipeline instanceof WechatPartnerPipeline) {
-            AssertUtils.notEmpty(request.getMchId(), "参数错误: 未提供子商户信息");
+            AssertUtils.notEmpty(request.getMchId(), "参数错误: 服务商模式需提供微信子商户信息");
         }
 
         LocalDateTime now = LocalDateTime.now().withNano(0);
         KeyGenerator paymentIdKey = snowflakeKeyManager.getKeyGenerator(SnowflakeKey.PAYMENT_ID);
-        String paymentId = String.valueOf(paymentIdKey.nextId());
+        String paymentId = paymentIdKey.nextId();
         WechatPrepayRequest prepayRequest = WechatPrepayRequest.of(paymentId, request.getOpenId(), request.getAmount(),
             request.getGoods(), request.getDescription(), now);
         prepayRequest.attach(WechatMerchant.of(request.getMchId(), request.getAppId()));
@@ -124,7 +124,7 @@ public class WechatFeeServiceImpl implements IWechatFeeService {
         };
 
         KeyGenerator tradeIdKey = snowflakeKeyManager.getKeyGenerator(SnowflakeKey.TRADE_ID);
-        String tradeId = String.valueOf(tradeIdKey.nextId());
+        String tradeId = tradeIdKey.nextId();
         DataPartition partition = DataPartition.strategy(merchant.parentMchId());
         TradeOrder tradeOrder = TradeOrder.builder().mchId(merchant.getMchId()).appId(application.getAppId())
             .tradeId(tradeId).type(TradeType.ONLINE_FEE.getCode()).outTradeNo(request.getOutTradeNo())
@@ -137,8 +137,8 @@ public class WechatFeeServiceImpl implements IWechatFeeService {
         String wxMchId = pipeline instanceof WechatPartnerPipeline ? request.getMchId() : config.getMchId();
         String appId = pipeline instanceof WechatPartnerPipeline ? request.getAppId() : config.getAppId();
         String objectId = switch (paymentType) {
-            case JSAPI -> ((JsApiPrepayResponse)prepayResponse).getPrepayId();
-            case NATIVE -> ((NativePrepayResponse)prepayResponse).getCodeUrl();
+            case JSAPI -> ((WechatJsApiResponse)prepayResponse).getPrepayId();
+            case NATIVE -> ((WechatNativeResponse)prepayResponse).getCodeUrl();
             default -> null;
         };
         WechatPayment payment = WechatPayment.builder().mchId(merchant.getMchId()).wxMchId(wxMchId).appId(appId)
@@ -154,7 +154,7 @@ public class WechatFeeServiceImpl implements IWechatFeeService {
         paymentFeeDao.insertPaymentFees(partition, paymentFeeDos);
 
         // 发送MQ延时消息: 实现十分钟后根据微信支付查询结果，关闭或完成本地支付订单
-        messageQueueService.sendWechatScanMessage(TaskMessage.of(TaskMessage.TYPE_WECHAT_PREPAY_SCAN, paymentId));
+        messageQueueService.sendWechatScanMessage(MessageEvent.of(MessageEvent.TYPE_WECHAT_PREPAY_SCAN, paymentId));
         return prepayResponse;
     }
 
@@ -199,13 +199,14 @@ public class WechatFeeServiceImpl implements IWechatFeeService {
             accountPipelineService.submitExclusively(transaction::build);
         }
         WechatPaymentResult paymentResult = new WechatPaymentResult(payment.getPaymentId(), paymentState.getCode(),
-            trade.getOutTradeNo(), now, response.getMessage());
+            trade.getOutTradeNo(), response.getWhen() != null ? response.getWhen() : now, response.getMessage());
         messageQueueService.sendWechatNotifyMessage(payment.getNotifyUri(), paymentResult);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void closePrepayOrder(WechatPayment payment) {
+    public void closePrepayOrder(WechatPrepayOrder order) {
+        WechatPayment payment = order.getObject(WechatPayment.class);
         if (!PaymentState.PENDING.equalTo(payment.getState())) {
             throw new TradePaymentException(ErrorCode.INVALID_OBJECT_STATE, "不能关闭微信订单: 无效的订单状态");
         }
@@ -216,7 +217,7 @@ public class WechatFeeServiceImpl implements IWechatFeeService {
             new TradePaymentException(ErrorCode.OBJECT_NOT_FOUND, "支付订单不存在"));
 
         WechatPipeline pipeline = paymentPipelineManager.findPipelineById(payment.getPipelineId(), WechatPipeline.class);
-        WechatPrepayClose request = WechatPrepayClose.of(payment.getPaymentId());
+        WechatPrepayOrder request = WechatPrepayOrder.of(payment.getPaymentId());
         request.attach(WechatMerchant.of(payment.getWxMchId(), payment.getAppId()));
         pipeline.closePrepayOrder(request);
         WechatPaymentDTO paymentDTO = WechatPaymentDTO.builder().paymentId(payment.getPaymentId())
@@ -260,7 +261,7 @@ public class WechatFeeServiceImpl implements IWechatFeeService {
         LocalDateTime now = LocalDateTime.now().withNano(0);
         KeyGenerator refundIdKey = snowflakeKeyManager.getKeyGenerator(SnowflakeKey.PAYMENT_ID);
         String refundId = refundIdKey.nextId();
-        WechatPipeline pipeline = paymentPipelineManager.findPipelineByMchId(payment.getPipelineId(), WechatPipeline.class);
+        WechatPipeline pipeline = paymentPipelineManager.findPipelineById(payment.getPipelineId(), WechatPipeline.class);
         WechatRefundRequest refundRequest = WechatRefundRequest.of(refundId, payment.getPaymentId(), trade.getMaxAmount(),
             request.getAmount(), request.getDescription(), now);
         WechatRefundResponse refundResponse = pipeline.sendRefundRequest(refundRequest);
@@ -271,7 +272,7 @@ public class WechatFeeServiceImpl implements IWechatFeeService {
             .paymentId(refundId).payType(payment.getPayType()).pipelineId(payment.getPipelineId())
             .accountId(payment.getAccountId()).name(payment.getName()).goods(payment.getGoods() + "-退款")
             .amount(request.getAmount()).objectId(payment.getPaymentId()).openId(payment.getOpenId())
-            .payTime(refundRequest.getWhen()).outTradeNo(refundResponse.getOutTradeNo()).state(refundState.getCode())
+            .payTime(refundResponse.getWhen()).outTradeNo(refundResponse.getOutTradeNo()).state(refundState.getCode())
             .notifyUri(request.getNotifyUri()).description(request.getDescription()).version(0).createdTime(now)
             .modifiedTime(now).build();
         wechatPaymentDao.insertWechatPayment(refund);
@@ -302,7 +303,7 @@ public class WechatFeeServiceImpl implements IWechatFeeService {
             }
         } else {
             // 十分钟兜底处理微信退款订单
-            messageQueueService.sendWechatScanMessage(TaskMessage.of(TaskMessage.TYPE_WECHAT_REFUND_SCAN, refundId));
+            messageQueueService.sendWechatScanMessage(MessageEvent.of(MessageEvent.TYPE_WECHAT_REFUND_SCAN, refundId));
         }
 
         return new WechatRefundResult(refundId, payment.getPaymentId(), refundState.getCode(),
@@ -316,7 +317,7 @@ public class WechatFeeServiceImpl implements IWechatFeeService {
         WechatPayment payment = response.getObject("payment", WechatPayment.class);
         PaymentState refundState = WechatStateUtils.getRefundState(response.getState());
         if (refundState != PaymentState.SUCCESS && refundState != PaymentState.FAILED) {
-            LOG.warn("Ignore wechat refund notification for {}:{}", payment.getPaymentId(), response.getState());
+            LOG.warn("Ignore wechat refund notification for {}:{}", refund.getPaymentId(), response.getState());
             return;
         }
 
@@ -325,6 +326,12 @@ public class WechatFeeServiceImpl implements IWechatFeeService {
         DataPartition partition = DataPartition.strategy(merchant.parentMchId());
         TradeOrder trade = tradeOrderDao.findByTradeId(partition, refund.getTradeId()).get();
 
+        WechatPaymentDTO refundDTO = WechatPaymentDTO.builder().paymentId(refund.getPaymentId())
+            .outTradeNo(response.getOutTradeNo()).openId(null).payTime(response.getWhen()).state(refundState.getCode())
+            .description(response.getMessage()).version(refund.getVersion()).modifiedTime(now).build();
+        if (wechatPaymentDao.compareAndSetState(refundDTO) == 0) {
+            throw new TradePaymentException(ErrorCode.SYSTEM_BUSY_ERROR, ErrorCode.MESSAGE_SYSTEM_BUSY);
+        }
         RefundPayment refundPayment = RefundPayment.builder().paymentId(refund.getPaymentId()).type(TradeType.REFUND_TRADE.getCode())
             .tradeId(trade.getTradeId()).tradeType(trade.getType()).channelId(ChannelType.WXPAY.getCode())
                 // TODO: miss cycleNo

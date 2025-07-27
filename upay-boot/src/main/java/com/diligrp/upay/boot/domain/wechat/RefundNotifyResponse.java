@@ -3,7 +3,7 @@ package com.diligrp.upay.boot.domain.wechat;
 /**
  * 退款结果模型
  */
-public class NotifyRefundResponse {
+public class RefundNotifyResponse {
     // 微信退款单号
     private String refund_id;
     // 商户退款单号

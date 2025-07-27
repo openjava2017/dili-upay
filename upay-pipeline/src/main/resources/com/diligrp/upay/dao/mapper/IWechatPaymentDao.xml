@@ -58,7 +58,7 @@
             upay_wechat_payment uwp
             LEFT JOIN upay_trade_order uto ON uwp.trade_id = uto.trade_id
             LEFT JOIN upay_user_account uua ON uwp.account_id = uua.account_id
-            LEFT JOIN upay_merchant um ON uwp.mch_id = um.id
+            LEFT JOIN upay_merchant um ON uwp.mch_id = um.mch_id
         WHERE
             uwp.mch_id = #{mchId}
             <if test="type != null">
@@ -96,7 +96,7 @@
             upay_wechat_payment uwp
             LEFT JOIN upay_trade_order uto ON uwp.trade_id = uto.trade_id
             LEFT JOIN upay_user_account uua ON uwp.account_id = uua.account_id
-            LEFT JOIN upay_merchant um ON uwp.mch_id = um.id
+            LEFT JOIN upay_merchant um ON uwp.mch_id = um.mch_id
         WHERE
             uwp.mch_id = #{mchId}
             <if test="type != null">

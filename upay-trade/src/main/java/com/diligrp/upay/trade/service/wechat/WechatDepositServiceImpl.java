@@ -33,7 +33,7 @@ import com.diligrp.upay.trade.domain.wechat.WechatPaymentResult;
 import com.diligrp.upay.trade.domain.wechat.WechatPrepayDTO;
 import com.diligrp.upay.trade.exception.TradePaymentException;
 import com.diligrp.upay.trade.message.MessageQueueService;
-import com.diligrp.upay.trade.message.TaskMessage;
+import com.diligrp.upay.trade.message.MessageEvent;
 import com.diligrp.upay.trade.model.TradeOrder;
 import com.diligrp.upay.trade.model.TradePayment;
 import com.diligrp.upay.trade.service.IWechatDepositService;
@@ -92,7 +92,7 @@ public class WechatDepositServiceImpl implements IWechatDepositService {
         MerchantPermit merchant = application.getMerchant();
         WechatPipeline pipeline = paymentPipelineManager.findPipelineByMchId(merchant.getMchId(), WechatPipeline.class);
         if (pipeline instanceof WechatPartnerPipeline) {
-            AssertUtils.notEmpty(request.getMchId(), "参数错误: 未提供子商户信息");
+            AssertUtils.notEmpty(request.getMchId(), "参数错误: 服务商模式需提供微信子商户信息");
         }
 
         LocalDateTime now = LocalDateTime.now().withNano(0);
@@ -122,8 +122,8 @@ public class WechatDepositServiceImpl implements IWechatDepositService {
         String wxMchId = pipeline instanceof WechatPartnerPipeline ? request.getMchId() : config.getMchId();
         String appId = pipeline instanceof WechatPartnerPipeline ? request.getAppId() : config.getAppId();
         String objectId = switch (paymentType) {
-            case JSAPI -> ((JsApiPrepayResponse)prepayResponse).getPrepayId();
-            case NATIVE -> ((NativePrepayResponse)prepayResponse).getCodeUrl();
+            case JSAPI -> ((WechatJsApiResponse)prepayResponse).getPrepayId();
+            case NATIVE -> ((WechatNativeResponse)prepayResponse).getCodeUrl();
             default -> null;
         };
         WechatPayment payment = WechatPayment.builder().mchId(merchant.getMchId()).wxMchId(wxMchId).appId(appId)
@@ -135,7 +135,7 @@ public class WechatDepositServiceImpl implements IWechatDepositService {
         wechatPaymentDao.insertWechatPayment(payment);
 
         // 发送MQ延时消息: 实现十分钟后根据微信支付查询结果，关闭或完成本地支付订单
-        messageQueueService.sendWechatScanMessage(TaskMessage.of(TaskMessage.TYPE_WECHAT_PREPAY_SCAN, paymentId));
+        messageQueueService.sendWechatScanMessage(MessageEvent.of(MessageEvent.TYPE_WECHAT_PREPAY_SCAN, paymentId));
         return prepayResponse;
     }
 
@@ -186,7 +186,8 @@ public class WechatDepositServiceImpl implements IWechatDepositService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void closePrepayOrder(WechatPayment payment) {
+    public void closePrepayOrder(WechatPrepayOrder order) {
+        WechatPayment payment = order.getObject(WechatPayment.class);
         if (!PaymentState.PENDING.equalTo(payment.getState())) {
             throw new TradePaymentException(ErrorCode.INVALID_OBJECT_STATE, "不能关闭微信订单: 无效的订单状态");
         }
@@ -197,7 +198,7 @@ public class WechatDepositServiceImpl implements IWechatDepositService {
             new TradePaymentException(ErrorCode.OBJECT_NOT_FOUND, "支付订单不存在"));
 
         WechatPipeline pipeline = paymentPipelineManager.findPipelineById(payment.getPipelineId(), WechatPipeline.class);
-        WechatPrepayClose request = WechatPrepayClose.of(payment.getPaymentId());
+        WechatPrepayOrder request = WechatPrepayOrder.of(payment.getPaymentId());
         request.attach(WechatMerchant.of(payment.getWxMchId(), payment.getAppId()));
         pipeline.closePrepayOrder(request);
         WechatPaymentDTO paymentDTO = WechatPaymentDTO.builder().paymentId(payment.getPaymentId())

@@ -1,11 +1,13 @@
 package com.diligrp.upay.boot.domain.wechat;
 
 /**
- * 预支付ID
+ * 支付ID
  */
-public class PrepayId {
+public class PaymentId {
     // 支付ID
     private String paymentId;
+    // 退款ID
+    private String refundId;
     // 模式 - 查询交易状态时使用
     private String mode;
 
@@ -15,6 +17,14 @@ public class PrepayId {
 
     public void setPaymentId(String paymentId) {
         this.paymentId = paymentId;
+    }
+
+    public String getRefundId() {
+        return refundId;
+    }
+
+    public void setRefundId(String refundId) {
+        this.refundId = refundId;
     }
 
     public String getMode() {

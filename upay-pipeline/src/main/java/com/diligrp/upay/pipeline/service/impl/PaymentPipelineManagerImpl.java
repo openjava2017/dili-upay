@@ -72,7 +72,7 @@ public class PaymentPipelineManagerImpl extends LifeCycle implements IPaymentPip
     @Override
     public <T extends PaymentPipeline> T findPipelineByMchId(long mchId, Class<T> type) {
         List<T> allPipelines = pipelines.values().stream().filter(p -> p.mchId() == mchId)
-            .filter(p -> type.isAssignableFrom(p.getClass())).map(p -> type.cast(p)).collect(Collectors.toList());
+            .filter(p -> type.isAssignableFrom(p.getClass())).map(type::cast).toList();
         if (pipelines.isEmpty()) {
             throw new PaymentPipelineException(ErrorCode.OBJECT_NOT_FOUND, "该商户未配置此支付通道");
         }
@@ -85,7 +85,7 @@ public class PaymentPipelineManagerImpl extends LifeCycle implements IPaymentPip
     @Override
     public <T extends PaymentPipeline> List<T> listPipelines(long mchId, Class<T> type) {
         return pipelines.values().stream().filter(p -> p.mchId() == mchId)
-            .filter(p -> type.isAssignableFrom(p.getClass())).map(p -> type.cast(p)).collect(Collectors.toList());
+            .filter(p -> type.isAssignableFrom(p.getClass())).map(type::cast).collect(Collectors.toList());
     }
 
     @Override

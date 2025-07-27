@@ -3,7 +3,7 @@ package com.diligrp.upay.pipeline.domain;
 /**
  * 微信小程序预支付响应
  */
-public class JsApiPrepayResponse extends WechatPrepayResponse {
+public class WechatJsApiResponse extends WechatPrepayResponse {
     // 微信预支付ID
     protected String prepayId;
     // 时间戳
@@ -15,9 +15,9 @@ public class JsApiPrepayResponse extends WechatPrepayResponse {
     // 签名
     protected String paySign;
 
-    public static JsApiPrepayResponse of(String paymentId, String prepayId, String timeStamp, String nonceStr,
+    public static WechatJsApiResponse of(String paymentId, String prepayId, String timeStamp, String nonceStr,
                                          String signType, String paySign) {
-        JsApiPrepayResponse response = new JsApiPrepayResponse();
+        WechatJsApiResponse response = new WechatJsApiResponse();
         response.paymentId = paymentId;
         response.prepayId = prepayId;
         response.timeStamp = timeStamp;

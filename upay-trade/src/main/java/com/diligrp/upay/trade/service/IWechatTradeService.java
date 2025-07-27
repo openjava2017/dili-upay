@@ -2,8 +2,8 @@ package com.diligrp.upay.trade.service;
 
 import com.diligrp.upay.core.domain.ApplicationPermit;
 import com.diligrp.upay.pipeline.domain.WechatPaymentResponse;
+import com.diligrp.upay.pipeline.domain.WechatPrepayOrder;
 import com.diligrp.upay.pipeline.domain.WechatPrepayResponse;
-import com.diligrp.upay.pipeline.model.WechatPayment;
 import com.diligrp.upay.trade.domain.wechat.WechatPrepayDTO;
 
 /**
@@ -24,5 +24,5 @@ public interface IWechatTradeService {
     /**
      * 关闭微信预支付订单
      */
-    void closePrepayOrder(WechatPayment payment);
+    void closePrepayOrder(WechatPrepayOrder order);
 }

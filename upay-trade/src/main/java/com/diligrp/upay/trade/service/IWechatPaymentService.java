@@ -27,7 +27,7 @@ public interface IWechatPaymentService {
     /**
      * 查询微信预支付订单状态
      */
-    WechatPaymentResult queryPrepayOrder(ApplicationPermit application, String paymentId, String mode);
+    WechatPaymentResult queryPrepayOrder(ApplicationPermit application, WechatPrepayOrder order, String mode);
 
     /**
      * 关闭微信预支付订单
@@ -48,11 +48,11 @@ public interface IWechatPaymentService {
     /**
      * 查询微信退款订单状态
      */
-    WechatRefundResult queryRefundOrder(ApplicationPermit application, String refundId, String mode);
+    WechatRefundResult queryRefundOrder(ApplicationPermit application, WechatRefundOrder order, String mode);
 
     /**
      *  通知微信发货
-     *  解决买家微信付款成功，卖家微信商户号无法收到钱，需要去自己的微信后台操作一下【发货】
+     *  服务商模式下，解决买家微信付款成功，卖家微信商户号无法收到钱，需要去自己的微信后台操作一下【发货】
      */
     void deliverGoods(String paymentId, int logisticsType);
 
@@ -66,10 +66,10 @@ public interface IWechatPaymentService {
     /**
      * 扫描微信支付申请 - 根据微信订单查询结果，进行关闭或完成本地支付订单
      */
-    void scanWechatPrepayOrder(String paymentId);
+    void scanWechatPrepayOrder(WechatPrepayOrder order);
 
     /**
-     * 扫描微信退款申请 - 根据微信订单查询结果，进行关闭或完成本地支付订单
+     * 扫描微信退款申请 - 根据微信退款查询结果，完成退款订单
      */
-    void scanWechatRefundOrder(String refundId);
+    void scanWechatRefundOrder(WechatRefundOrder order);
 }

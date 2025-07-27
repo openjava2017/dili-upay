@@ -4,7 +4,6 @@ import com.diligrp.upay.pipeline.domain.wechat.SumWechatStatement;
 import com.diligrp.upay.pipeline.domain.wechat.WechatPaymentDTO;
 import com.diligrp.upay.pipeline.domain.wechat.WechatStatementDTO;
 import com.diligrp.upay.pipeline.domain.wechat.WechatStatementQuery;
-import com.diligrp.upay.pipeline.model.PaymentPipeline;
 import com.diligrp.upay.pipeline.model.WechatPayment;
 import com.diligrp.upay.shared.mybatis.MybatisMapperSupport;
 import org.springframework.stereotype.Repository;
