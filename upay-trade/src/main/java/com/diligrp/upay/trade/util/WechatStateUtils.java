@@ -20,9 +20,15 @@ public final class WechatStateUtils {
         return state;
     }
 
+    public static boolean isPendingState(String wechatState) {
+        return switch (wechatState) {
+            case WechatConstants.STATE_NOTPAY, WechatConstants.STATE_USERPAYING -> true;
+            default -> false;
+        };
+    }
+
     public static PaymentState getRefundState(String wechatState) {
         PaymentState state = switch (wechatState) {
-            // 转入退款WechatConstants.STATE_REFUND也认为是支付成功，只有支付成功的才会转入STATE_REFUND状态
             // 目前支付系统发生退款时，不会修改原来支付记录upay_trade_payment，只会修改upay_trade_order
             case WechatConstants.REFUND_SUCCESS -> PaymentState.SUCCESS;
             case WechatConstants.REFUND_PROCESSING -> PaymentState.PROCESSING;

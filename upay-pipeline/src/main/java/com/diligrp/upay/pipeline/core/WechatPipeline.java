@@ -11,6 +11,7 @@ import com.diligrp.upay.pipeline.util.WechatConstants;
 import com.diligrp.upay.pipeline.util.WechatSignatureUtils;
 import com.diligrp.upay.shared.ErrorCode;
 import com.diligrp.upay.shared.security.RsaCipher;
+import com.diligrp.upay.shared.util.AssertUtils;
 import com.diligrp.upay.shared.util.RandomUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,8 @@ public abstract class WechatPipeline extends PaymentPipeline<WechatPipeline.Wech
 
     public WechatPipeline(long mchId, long pipelineId, String name, String uri, String params) throws Exception {
         super(mchId, pipelineId, name, uri, params);
+
+        AssertUtils.notEmpty(params().notifyBaseUri, String.format("微信支付缺少参数配置: notifyBaseUri"));
     }
 
     /**
@@ -77,10 +80,12 @@ public abstract class WechatPipeline extends PaymentPipeline<WechatPipeline.Wech
         }
     }
 
-    public NativePrepayResponse sendNativePrepayRequest(WechatPrepayRequest request) {
+    public WechatNativeResponse sendNativePrepayRequest(WechatPrepayRequest request) {
         try {
-            String qrCode = getClient().sendNativePrepayRequest(request, params().getNotifyUri());
-            return NativePrepayResponse.of(request.getPaymentId(), qrCode);
+            String notifyUri = String.format("%s%s?%s=%s", params().notifyBaseUri, WechatConstants.PAYMENT_NOTIFY_URI,
+                WechatConstants.PARAM_PIPELINE, pipelineId());
+            String qrCode = getClient().sendNativePrepayRequest(request, notifyUri);
+            return WechatNativeResponse.of(request.getPaymentId(), qrCode);
         } catch (PaymentServiceException pse) {
             throw pse;
         } catch (Exception ex) {
@@ -89,9 +94,11 @@ public abstract class WechatPipeline extends PaymentPipeline<WechatPipeline.Wech
         }
     }
 
-    public JsApiPrepayResponse sendJsApiPrepayRequest(WechatPrepayRequest request) {
+    public WechatJsApiResponse sendJsApiPrepayRequest(WechatPrepayRequest request) {
         try {
-            String prepayId = getClient().sendJsApiPrepayRequest(request, params().getNotifyUri());
+            String notifyUri = String.format("%s%s?%s=%s", params().notifyBaseUri, WechatConstants.PAYMENT_NOTIFY_URI,
+                WechatConstants.PARAM_PIPELINE, pipelineId());
+            String prepayId = getClient().sendJsApiPrepayRequest(request, notifyUri);
 
             String timeStamp = String.valueOf(System.currentTimeMillis() / 1000);
             String nonceStr = RandomUtils.randomString(32);
@@ -100,7 +107,7 @@ public abstract class WechatPipeline extends PaymentPipeline<WechatPipeline.Wech
             String message = String.format("%s\n%s\n%s\n%s\n", appId, timeStamp, nonceStr, packet);
             String paySign = WechatSignatureUtils.signature(message, getClient().getWechatConfig().getPrivateKey());
             String signType = WechatConstants.RSA_ALGORITHM;
-            return JsApiPrepayResponse.of(request.getPaymentId(), prepayId, timeStamp, nonceStr, signType, paySign);
+            return WechatJsApiResponse.of(request.getPaymentId(), prepayId, timeStamp, nonceStr, signType, paySign);
         } catch (PaymentServiceException pse) {
             throw pse;
         } catch (Exception ex) {
@@ -109,7 +116,7 @@ public abstract class WechatPipeline extends PaymentPipeline<WechatPipeline.Wech
         }
     }
 
-    public WechatPaymentResponse queryPrepayResponse(WechatPrepayQuery request) {
+    public WechatPaymentResponse queryPrepayResponse(WechatPrepayOrder request) {
         try {
             return getClient().queryPrepayResponse(request);
         } catch (PaymentServiceException pse) {
@@ -120,7 +127,7 @@ public abstract class WechatPipeline extends PaymentPipeline<WechatPipeline.Wech
         }
     }
 
-    public void closePrepayOrder(WechatPrepayClose request) {
+    public void closePrepayOrder(WechatPrepayOrder request) {
         try {
             getClient().closePrepayOrder(request);
         } catch (PaymentServiceException pse) {
@@ -133,7 +140,9 @@ public abstract class WechatPipeline extends PaymentPipeline<WechatPipeline.Wech
 
     public WechatRefundResponse sendRefundRequest(WechatRefundRequest request) {
         try {
-            return getClient().sendRefundRequest(request, params().getRefundUri());
+            String notifyUri = String.format("%s%s?%s=%s", params().notifyBaseUri, WechatConstants.REFUND_NOTIFY_URI,
+                WechatConstants.PARAM_PIPELINE, pipelineId());
+            return getClient().sendRefundRequest(request, notifyUri);
         } catch (PaymentServiceException pse) {
             throw pse;
         } catch (Exception ex) {
@@ -142,7 +151,7 @@ public abstract class WechatPipeline extends PaymentPipeline<WechatPipeline.Wech
         }
     }
 
-    public WechatRefundResponse queryRefundResponse(WechatRefundQuery request) {
+    public WechatRefundResponse queryRefundResponse(WechatRefundOrder request) {
         try {
             return getClient().queryRefundOrder(request);
         } catch (PaymentServiceException pse) {
@@ -166,29 +175,19 @@ public abstract class WechatPipeline extends PaymentPipeline<WechatPipeline.Wech
     }
 
     public static class WechatParams extends PipelineParams {
-        // 支付结果通知地址
-        private String notifyUri;
-        // 退款结果通知地址
-        private String refundUri;
+        // 微信支付通知base地址，如: https://gateway.diligrp.com/pay-service
+        private String notifyBaseUri;
 
         public WechatParams(String params) {
             super(params);
         }
 
-        public String getNotifyUri() {
-            return notifyUri;
+        public String getNotifyBaseUri() {
+            return notifyBaseUri;
         }
 
-        public void setNotifyUri(String notifyUri) {
-            this.notifyUri = notifyUri;
-        }
-
-        public String getRefundUri() {
-            return refundUri;
-        }
-
-        public void setRefundUri(String refundUri) {
-            this.refundUri = refundUri;
+        public void setNotifyBaseUri(String notifyBaseUri) {
+            this.notifyBaseUri = notifyBaseUri;
         }
     }
 }

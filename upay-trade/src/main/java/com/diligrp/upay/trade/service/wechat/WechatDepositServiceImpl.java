@@ -33,6 +33,7 @@ import com.diligrp.upay.trade.domain.wechat.WechatPaymentResult;
 import com.diligrp.upay.trade.domain.wechat.WechatPrepayDTO;
 import com.diligrp.upay.trade.exception.TradePaymentException;
 import com.diligrp.upay.trade.message.MessageQueueService;
+import com.diligrp.upay.trade.message.MessageEvent;
 import com.diligrp.upay.trade.model.TradeOrder;
 import com.diligrp.upay.trade.model.TradePayment;
 import com.diligrp.upay.trade.service.IWechatDepositService;
@@ -91,11 +92,11 @@ public class WechatDepositServiceImpl implements IWechatDepositService {
         MerchantPermit merchant = application.getMerchant();
         WechatPipeline pipeline = paymentPipelineManager.findPipelineByMchId(merchant.getMchId(), WechatPipeline.class);
         if (pipeline instanceof WechatPartnerPipeline) {
-            AssertUtils.notEmpty(request.getMchId(), "参数错误: 未提供子商户信息");
+            AssertUtils.notEmpty(request.getMchId(), "参数错误: 服务商模式需提供微信子商户信息");
         }
-        UserAccount account = userAccountService.findUserAccountById(request.getAccountId());
 
         LocalDateTime now = LocalDateTime.now().withNano(0);
+        UserAccount account = userAccountService.findUserAccountById(merchant.parentMchId(), request.getAccountId());
         KeyGenerator paymentIdKey = snowflakeKeyManager.getKeyGenerator(SnowflakeKey.PAYMENT_ID);
         String paymentId = String.valueOf(paymentIdKey.nextId());
         WechatPrepayRequest prepayRequest = WechatPrepayRequest.of(paymentId, request.getOpenId(), request.getAmount(),
@@ -118,12 +119,11 @@ public class WechatDepositServiceImpl implements IWechatDepositService {
         tradeOrderDao.insertTradeOrder(partition, tradeOrder);
 
         WechatConfig config = pipeline.getClient().getWechatConfig();
-        boolean partner = pipeline instanceof WechatPartnerPipeline;
-        String wxMchId = partner ? request.getMchId() : config.getMchId();
-        String appId = partner ? request.getAppId() : config.getAppId();
+        String wxMchId = pipeline instanceof WechatPartnerPipeline ? request.getMchId() : config.getMchId();
+        String appId = pipeline instanceof WechatPartnerPipeline ? request.getAppId() : config.getAppId();
         String objectId = switch (paymentType) {
-            case JSAPI -> ((JsApiPrepayResponse)prepayResponse).getPrepayId();
-            case NATIVE -> ((NativePrepayResponse)prepayResponse).getCodeUrl();
+            case JSAPI -> ((WechatJsApiResponse)prepayResponse).getPrepayId();
+            case NATIVE -> ((WechatNativeResponse)prepayResponse).getCodeUrl();
             default -> null;
         };
         WechatPayment payment = WechatPayment.builder().mchId(merchant.getMchId()).wxMchId(wxMchId).appId(appId)
@@ -131,23 +131,18 @@ public class WechatDepositServiceImpl implements IWechatDepositService {
             .pipelineId(pipeline.pipelineId()).accountId(account.getAccountId()).name(account.getName())
             .goods(request.getGoods()).amount(request.getAmount()).objectId(objectId).openId(null)
             .payTime(null).outTradeNo(null).state(PaymentState.PENDING.getCode()).notifyUri(request.getNotifyUri())
-            .description(null).build();
+            .description(null).version(0).createdTime(now).modifiedTime(now).build();
         wechatPaymentDao.insertWechatPayment(payment);
 
         // 发送MQ延时消息: 实现十分钟后根据微信支付查询结果，关闭或完成本地支付订单
-        messageQueueService.sendWechatScanMessage(paymentId);
+        messageQueueService.sendWechatScanMessage(MessageEvent.of(MessageEvent.TYPE_WECHAT_PREPAY_SCAN, paymentId));
         return prepayResponse;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void notifyPaymentResult(WechatPaymentResponse response) {
-        WechatPayment payment = wechatPaymentDao.findByPaymentId(response.getPaymentId()).orElseThrow(
-            () -> new TradePaymentException(ErrorCode.OBJECT_NOT_FOUND, "微信支付订单不存在"));
-        if (PaymentState.SUCCESS.equalTo(payment.getState()) || PaymentState.FAILED.equalTo(payment.getState())) {
-            LOG.warn("Duplicate wechat order payment process for {}:{}", payment.getPaymentId(), payment.getState());
-            return;
-        }
+        WechatPayment payment = response.getObject(WechatPayment.class);
         PaymentState paymentState = WechatStateUtils.getPaymentState(response.getState());
         if (paymentState != PaymentState.SUCCESS && paymentState != PaymentState.FAILED) {
             LOG.warn("Ignore wechat order payment notification for {}:{}", payment.getPaymentId(), response.getState());
@@ -158,8 +153,7 @@ public class WechatDepositServiceImpl implements IWechatDepositService {
         UserAccount account = userAccountService.findUserAccountById(payment.getAccountId());
         MerchantPermit merchant = accessPermitService.loadMerchantPermit(payment.getMchId());
         DataPartition partition = DataPartition.strategy(merchant.parentMchId());
-        TradeOrder trade = tradeOrderDao.findByTradeId(partition, payment.getTradeId()).orElseThrow(() ->
-            new TradePaymentException(ErrorCode.OBJECT_NOT_FOUND, "支付订单不存在"));
+        TradeOrder trade = tradeOrderDao.findByTradeId(partition, payment.getTradeId()).get();
         WechatPaymentDTO paymentDTO = WechatPaymentDTO.builder().paymentId(payment.getPaymentId())
             .outTradeNo(response.getOutTradeNo()).openId(response.getOpenId()).payTime(response.getWhen())
             .state(paymentState.getCode()).description(response.getMessage()).version(payment.getVersion())
@@ -192,7 +186,8 @@ public class WechatDepositServiceImpl implements IWechatDepositService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void closePrepayOrder(WechatPayment payment) {
+    public void closePrepayOrder(WechatPrepayOrder order) {
+        WechatPayment payment = order.getObject(WechatPayment.class);
         if (!PaymentState.PENDING.equalTo(payment.getState())) {
             throw new TradePaymentException(ErrorCode.INVALID_OBJECT_STATE, "不能关闭微信订单: 无效的订单状态");
         }
@@ -202,8 +197,8 @@ public class WechatDepositServiceImpl implements IWechatDepositService {
         TradeOrder trade = tradeOrderDao.findByTradeId(partition, payment.getTradeId()).orElseThrow(() ->
             new TradePaymentException(ErrorCode.OBJECT_NOT_FOUND, "支付订单不存在"));
 
-        WechatPipeline pipeline = paymentPipelineManager.findPipelineByMchId(payment.getMchId(), WechatPipeline.class);
-        WechatPrepayClose request = WechatPrepayClose.of(payment.getPaymentId());
+        WechatPipeline pipeline = paymentPipelineManager.findPipelineById(payment.getPipelineId(), WechatPipeline.class);
+        WechatPrepayOrder request = WechatPrepayOrder.of(payment.getPaymentId());
         request.attach(WechatMerchant.of(payment.getWxMchId(), payment.getAppId()));
         pipeline.closePrepayOrder(request);
         WechatPaymentDTO paymentDTO = WechatPaymentDTO.builder().paymentId(payment.getPaymentId())
@@ -213,10 +208,10 @@ public class WechatDepositServiceImpl implements IWechatDepositService {
             throw new TradePaymentException(ErrorCode.SYSTEM_BUSY_ERROR, ErrorCode.MESSAGE_SYSTEM_BUSY);
         }
 
-        TradePayment tradePayment = TradePayment.builder().paymentId(payment.getPaymentId()).tradeId(payment.getTradeId())
+        TradePayment tradePayment = TradePayment.builder().paymentId(payment.getPaymentId()).tradeId(trade.getTradeId())
             .channelId(ChannelType.WXPAY.getCode()).payType(payment.getPayType()).accountId(payment.getAccountId())
             .name(payment.getName()).amount(payment.getAmount()).fee(0L).protocolId(null).cycleNo(null)
-            .state(PaymentState.FAILED.getCode()).description("人工关闭订单").version(0).createdTime(now).modifiedTime(now).build();
+            .state(PaymentState.FAILED.getCode()).description("人工关闭微信订单").version(0).createdTime(now).modifiedTime(now).build();
         tradePaymentDao.insertTradePayment(partition, tradePayment);
 
         TradeStateDTO tradeStateDTO = TradeStateDTO.of(trade.getTradeId(), TradeState.CLOSED.getCode(), trade.getVersion(), now);

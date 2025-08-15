@@ -26,5 +26,5 @@ public interface IPaymentPipelineManager {
     /**
      * 根据ID获取支付通道
      */
-    <T extends PaymentPipeline> T findPipelineById(long pipelineId);
+    <T extends PaymentPipeline> T findPipelineById(long pipelineId, Class<T> type);
 }

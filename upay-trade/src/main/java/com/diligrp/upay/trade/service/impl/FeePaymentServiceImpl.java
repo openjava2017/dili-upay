@@ -105,7 +105,7 @@ public class FeePaymentServiceImpl implements IPaymentComponentService {
         MerchantPermit merchant = application.getMerchant();
         DataPartition partition = payment.getObject(DataPartition.class);
         TransactionStatus status = null;
-        UserAccount account = UserAccount.ANONYMOUS;
+        UserAccount account = null;
 
         if (ChannelType.ACCOUNT.equalTo(payment.getChannelId())) {
             account = userAccountService.findUserAccountById(merchant.parentMchId(), payment.getAccountId());
@@ -126,14 +126,17 @@ public class FeePaymentServiceImpl implements IPaymentComponentService {
 
         TradeOrder tradeOrder = TradeOrder.builder().mchId(merchant.getMchId()).appId(application.getAppId())
             .tradeId(tradeId).type(supportType().getCode()).outTradeNo(trade.getOutTradeNo())
-            .accountId(account.getAccountId()).name(account.getName()).amount(trade.getAmount())
+            .accountId(account != null ? account.getAccountId() : payment.getAccountId())
+            .name(account != null ? account.getName() : "匿名用户").amount(trade.getAmount())
             .maxAmount(trade.getAmount()).fee(0L).goods(trade.getGoods()).state(TradeState.SUCCESS.getCode())
             .description(trade.getDescription()).version(0).createdTime(now).modifiedTime(now).build();
         tradeOrderDao.insertTradeOrder(partition, tradeOrder);
         TradePayment tradePayment = TradePayment.builder().paymentId(paymentId).tradeId(tradeId)
-            .channelId(payment.getChannelId()).payType(payment.getPayType()).accountId(account.getAccountId())
-            .name(account.getName()).amount(payment.getAmount()).fee(0L).protocolId(null).cycleNo(payment.getCycleNo())
-            .state(PaymentState.SUCCESS.getCode()).description(null).version(0).createdTime(now).modifiedTime(now).build();
+            .channelId(payment.getChannelId()).payType(payment.getPayType())
+            .accountId(account != null ? account.getAccountId() : payment.getAccountId())
+            .name(account != null ? account.getName() : "匿名用户").amount(payment.getAmount())
+            .fee(0L).protocolId(null).cycleNo(payment.getCycleNo()).state(PaymentState.SUCCESS.getCode())
+            .description(null).version(0).createdTime(now).modifiedTime(now).build();
         tradePaymentDao.insertTradePayment(partition, tradePayment);
         List<PaymentFee> paymentFeeDos = fees.stream().map(fee ->
             PaymentFee.of(paymentId, fee.getAmount(), fee.getType(), fee.getTypeName(), fee.getDescription(), now)

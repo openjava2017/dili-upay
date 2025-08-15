@@ -33,12 +33,10 @@
     </resultMap>
 
     <select id="listPaymentPipelines" resultMap="PaymentPipelineMap">
-        INSERT INTO upay_fund_account(account_id, balance, frozen_amount, vouch_amount, mch_id, version, created_time, modified_time)
-        VALUES
-          (#{accountId}, #{balance}, #{frozenAmount}, #{vouchAmount}, #{mchId}, #{version}, #{createdTime}, #{modifiedTime})
+        SELECT * FROM upay_payment_pipeline
     </select>
 
     <select id="findWechatParam" parameterType="long" resultMap="WechatParamMap">
-        SELECT * FROM upay_fund_account WHERE account_id = #{accountId}
+        SELECT * FROM upay_payment_pipeline WHERE pipeline_id = #{pipelineId}
     </select>
 </mapper>

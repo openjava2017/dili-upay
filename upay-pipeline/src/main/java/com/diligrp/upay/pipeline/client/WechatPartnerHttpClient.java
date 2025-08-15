@@ -106,7 +106,7 @@ public class WechatPartnerHttpClient extends WechatHttpClient {
      * 查询微信支付订单状态
      */
     @Override
-    public WechatPaymentResponse queryPrepayResponse(WechatPrepayQuery request) throws Exception {
+    public WechatPaymentResponse queryPrepayResponse(WechatPrepayOrder request) throws Exception {
         WechatMerchant subMerchant = request.getObject(WechatMerchant.class);
         AssertUtils.notNull(subMerchant, "子商户信息缺失");
         AssertUtils.notEmpty(subMerchant.getMchId(), "子商户号参数缺失");
@@ -145,7 +145,7 @@ public class WechatPartnerHttpClient extends WechatHttpClient {
      * 已支付完成的订单调用关闭返回400, 订单不存在返回404
      */
     @Override
-    public void closePrepayOrder(WechatPrepayClose request) throws Exception {
+    public void closePrepayOrder(WechatPrepayOrder request) throws Exception {
         WechatMerchant subMerchant = request.getObject(WechatMerchant.class);
         AssertUtils.notNull(subMerchant, "子商户信息缺失");
         AssertUtils.notEmpty(subMerchant.getMchId(), "子商户号参数缺失");
@@ -193,7 +193,7 @@ public class WechatPartnerHttpClient extends WechatHttpClient {
             Map<String, Object> response = JsonUtils.fromJsonString(result.responseText, Map.class);
             LocalDateTime when = DateUtils.parseDateTime((String) response.get("success_time"), WechatConstants.RFC3339_FORMAT);
             return WechatRefundResponse.of((String) response.get("out_refund_no"), (String) response.get("refund_id"),
-                    when, (String) response.get("status"), (String) response.get("user_received_account"));
+                    when, (String) response.get("status"), (String) response.get("status"));
         } else {
             LOG.info("send wechat payment refund failed: {}", result.statusCode);
             ErrorMessage message = JsonUtils.fromJsonString(result.responseText, ErrorMessage.class);
@@ -205,7 +205,7 @@ public class WechatPartnerHttpClient extends WechatHttpClient {
      * 微信支付退款查询
      */
     @Override
-    public WechatRefundResponse queryRefundOrder(WechatRefundQuery request) throws Exception {
+    public WechatRefundResponse queryRefundOrder(WechatRefundOrder request) throws Exception {
         WechatMerchant subMerchant = request.getObject(WechatMerchant.class);
         AssertUtils.notNull(subMerchant, "子商户信息缺失");
         AssertUtils.notEmpty(subMerchant.getMchId(), "子商户号参数缺失");

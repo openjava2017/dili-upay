@@ -1,10 +1,6 @@
 package com.diligrp.upay.core.model;
 
-import com.diligrp.upay.core.type.AccountState;
-import com.diligrp.upay.core.type.AccountType;
-import com.diligrp.upay.core.type.UseFor;
 import com.diligrp.upay.shared.model.BaseDO;
-import com.diligrp.upay.shared.type.Gender;
 
 import java.time.LocalDateTime;
 import java.util.function.Consumer;
@@ -13,8 +9,6 @@ import java.util.function.Consumer;
  * 资金账户数据模型
  */
 public class UserAccount extends BaseDO {
-
-    public static final UserAccount ANONYMOUS = anonymous();
 
     // 客户ID
     private Long customerId;
@@ -195,13 +189,6 @@ public class UserAccount extends BaseDO {
         if (parentId != 0) {
             action.accept(this);
         }
-    }
-
-    private static UserAccount anonymous() {
-        UserAccount account = builder().customerId(0L).accountId(0L).parentId(0L).type(AccountType.PERSONAL.getCode())
-            .useFor(UseFor.FOR_TRADE.getCode()).name("匿名用户").telephone("13688182591")
-            .state(AccountState.NORMAL.getCode()).mchId(0L).build();
-        return account;
     }
 
     public static Builder builder() {

@@ -101,7 +101,7 @@ public class WechatDirectHttpClient extends WechatHttpClient {
     }
 
     @Override
-    public WechatPaymentResponse queryPrepayResponse(WechatPrepayQuery request) throws Exception {
+    public WechatPaymentResponse queryPrepayResponse(WechatPrepayOrder request) throws Exception {
         // 获取认证信息和签名信息
         String uri = String.format(TRANSACTION_QUERY, request.getPaymentId(), wechatConfig.getMchId());
         String authorization = WechatSignatureUtils.authorization(wechatConfig.getMchId(), WechatConstants.HTTP_GET, uri,
@@ -136,7 +136,7 @@ public class WechatDirectHttpClient extends WechatHttpClient {
      * 已支付完成的订单调用关闭返回400, 订单不存在返回404
      */
     @Override
-    public void closePrepayOrder(WechatPrepayClose request) throws Exception {
+    public void closePrepayOrder(WechatPrepayOrder request) throws Exception {
         // 获取认证信息和签名信息
         String uri = String.format(TRANSACTION_CLOSE, request.getPaymentId());
         String payload = JsonUtils.toJsonString(Merchant.of(wechatConfig.getMchId()));
@@ -180,7 +180,7 @@ public class WechatDirectHttpClient extends WechatHttpClient {
             Map<String, Object> response = JsonUtils.fromJsonString(result.responseText, Map.class);
             LocalDateTime when = DateUtils.parseDateTime((String) response.get("success_time"), WechatConstants.RFC3339_FORMAT);
             return WechatRefundResponse.of((String) response.get("out_refund_no"), (String) response.get("refund_id"),
-                when, (String) response.get("status"), (String) response.get("user_received_account"));
+                when, (String) response.get("status"), (String) response.get("status"));
         } else {
             LOG.info("send wechat refund failed: {}", result.statusCode);
             ErrorMessage message = JsonUtils.fromJsonString(result.responseText, ErrorMessage.class);
@@ -192,7 +192,7 @@ public class WechatDirectHttpClient extends WechatHttpClient {
      * 微信支付退款查询
      */
     @Override
-    public WechatRefundResponse queryRefundOrder(WechatRefundQuery request) throws Exception {
+    public WechatRefundResponse queryRefundOrder(WechatRefundOrder request) throws Exception {
         String uri = String.format(REFUND_QUERY, request.getRefundId());
         String authorization = WechatSignatureUtils.authorization(wechatConfig.getMchId(), WechatConstants.HTTP_GET,
             uri, wechatConfig.getPrivateKey(), wechatConfig.getSerialNo());

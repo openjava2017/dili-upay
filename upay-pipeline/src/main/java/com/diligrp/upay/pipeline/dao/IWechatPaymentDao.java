@@ -1,7 +1,9 @@
 package com.diligrp.upay.pipeline.dao;
 
+import com.diligrp.upay.pipeline.domain.wechat.SumWechatStatement;
 import com.diligrp.upay.pipeline.domain.wechat.WechatPaymentDTO;
-import com.diligrp.upay.pipeline.model.PaymentPipeline;
+import com.diligrp.upay.pipeline.domain.wechat.WechatStatementDTO;
+import com.diligrp.upay.pipeline.domain.wechat.WechatStatementQuery;
 import com.diligrp.upay.pipeline.model.WechatPayment;
 import com.diligrp.upay.shared.mybatis.MybatisMapperSupport;
 import org.springframework.stereotype.Repository;
@@ -15,9 +17,13 @@ import java.util.Optional;
 @Repository("wechatPaymentDao")
 public interface IWechatPaymentDao extends MybatisMapperSupport {
 
-    List<PaymentPipeline> insertWechatPayment(WechatPayment payment);
+    void insertWechatPayment(WechatPayment payment);
 
     Optional<WechatPayment> findByPaymentId(String paymentId);
 
     int compareAndSetState(WechatPaymentDTO paymentDTO);
+
+    List<WechatStatementDTO> listWechatStatements(WechatStatementQuery query);
+
+    SumWechatStatement sumWechatStatements(WechatStatementQuery query);
 }

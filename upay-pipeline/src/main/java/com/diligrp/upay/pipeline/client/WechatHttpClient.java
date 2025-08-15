@@ -66,11 +66,11 @@ public class WechatHttpClient extends ServiceEndpointSupport {
         throw new PaymentPipelineException(ErrorCode.OPERATION_NOT_ALLOWED, "支付通道不支持JsApi支付");
     }
 
-    public WechatPaymentResponse queryPrepayResponse(WechatPrepayQuery request) throws Exception {
+    public WechatPaymentResponse queryPrepayResponse(WechatPrepayOrder request) throws Exception {
         throw new PaymentPipelineException(ErrorCode.OPERATION_NOT_ALLOWED, "支付通道不支持此操作");
     }
 
-    public void closePrepayOrder(WechatPrepayClose request) throws Exception {
+    public void closePrepayOrder(WechatPrepayOrder request) throws Exception {
         throw new PaymentPipelineException(ErrorCode.OPERATION_NOT_ALLOWED, "支付通道不支持此操作");
     }
 
@@ -78,7 +78,7 @@ public class WechatHttpClient extends ServiceEndpointSupport {
         throw new PaymentPipelineException(ErrorCode.OPERATION_NOT_ALLOWED, "支付通道不支持此操作");
     }
 
-    public WechatRefundResponse queryRefundOrder(WechatRefundQuery request) throws Exception {
+    public WechatRefundResponse queryRefundOrder(WechatRefundOrder request) throws Exception {
         throw new PaymentPipelineException(ErrorCode.OPERATION_NOT_ALLOWED, "支付通道不支持此操作");
     }
 
@@ -141,15 +141,19 @@ public class WechatHttpClient extends ServiceEndpointSupport {
         }
     }
 
+    public String loginAuthorization(String code) {
+        return loginAuthorization(wechatConfig.getAppId(), wechatConfig.getAppSecret(), code);
+    }
+
     /**
      * 小程序登录授权，根据wx.login获得的临时登录凭证code，获取登录信息openId等
      */
-    public String loginAuthorization(String code) {
-        String uri = String.format(CODE_TO_SESSION, wechatConfig.getAppId(), wechatConfig.getAppSecret(), code);
+    public String loginAuthorization(String appId, String appSecret, String code) {
+        String uri = String.format(CODE_TO_SESSION, appId, appSecret, code);
         HttpRequest.Builder request = HttpRequest.newBuilder().uri(URI.create(WECHAT_BASE_URL + uri))
-                .version(HttpClient.Version.HTTP_2).timeout(Duration.ofMillis(MAX_REQUEST_TIMEOUT_TIME))
-                .header(CONTENT_TYPE, CONTENT_TYPE_JSON).header(WechatConstants.HEADER_ACCEPT, WechatConstants.ACCEPT_JSON)
-                .header(WechatConstants.HEADER_USER_AGENT, WechatConstants.USER_AGENT);
+            .version(HttpClient.Version.HTTP_2).timeout(Duration.ofMillis(MAX_REQUEST_TIMEOUT_TIME))
+            .header(CONTENT_TYPE, CONTENT_TYPE_JSON).header(WechatConstants.HEADER_ACCEPT, WechatConstants.ACCEPT_JSON)
+            .header(WechatConstants.HEADER_USER_AGENT, WechatConstants.USER_AGENT);
         LOG.info("Requesting MiniPro login authorization info: {}\n{}", code, uri);
         HttpResult result = execute(request.GET().build());
         if (result.statusCode == 200) {
@@ -166,9 +170,13 @@ public class WechatHttpClient extends ServiceEndpointSupport {
         }
     }
 
+    public WechatAccessToken getAccessToken() {
+        return getAccessToken(wechatConfig.getAppId(), wechatConfig.getAppSecret());
+    }
+
     /**
      * 获取小程序接口调用凭证：Token有效期内重复调用该接口不会更新Token，有效期5分钟前更新Token，新旧Token并行5分钟；该接口调用频率限制为 1万次每分钟，每天限制调用 50万次；
-     * <a href="https://developers.weixin.qq.com/miniprogram/dev/OpenApiDoc/mp-access-token/getStableAccessToken.html">...</a>
+     * @see <a href="https://developers.weixin.qq.com/miniprogram/dev/OpenApiDoc/mp-access-token/getStableAccessToken.html">...</a>
      */
     public WechatAccessToken getAccessToken(String appId, String appSecret) {
         Map<String, Object> params = new HashMap<>();
@@ -191,6 +199,7 @@ public class WechatHttpClient extends ServiceEndpointSupport {
 
     /**
      * 微信发货信息录入接口
+     * @see <a href="https://developers.weixin.qq.com/miniprogram/dev/platform-capabilities/business-capabilities/order-shipping/order-shipping.html">...</a>
      */
     public void sendUploadShippingRequest(UploadShippingRequest request, String accessToken) {
         String uri = String.format("%s?access_token=%s", UPLOAD_SHIPPING_URL, accessToken);
@@ -231,6 +240,23 @@ public class WechatHttpClient extends ServiceEndpointSupport {
         }
     }
 
+    /**
+     * 用于微信支付结果通知数据验签
+     */
+    public boolean dataVerify(String serialNo, String timestamp, String nonce, String sign, String payload) throws Exception {
+        LOG.debug("\n------Wechat Platform Data Verify------\nWechatpay-Serial={}\nWechatpay-Timestamp={}\n"
+            + "Wechatpay-Nonce={}\nWechatpay-Signature={}\n{}\n--------------------------------------",
+            serialNo, timestamp, nonce, sign, payload == null ? "" : payload);
+        Optional<WechatCertificate> certOpt = wechatConfig.getCertificate(serialNo);
+        if (certOpt.isEmpty()) { // 找不到证书则重新向微信平台请求新证书(旧证书即将过期时出现)
+            refreshCertificates();
+        }
+
+        WechatCertificate certificate = wechatConfig.getCertificate(serialNo).orElseThrow(() ->
+            new PaymentPipelineException(ErrorCode.OPERATION_NOT_ALLOWED, "找不到微信平台数字证书"));
+        return WechatSignatureUtils.verify(payload, timestamp, nonce, sign, certificate.getPublicKey());
+    }
+
     protected void verifyHttpResult(HttpResult result) throws Exception {
         if (result.statusCode == 401) {
             return; // 微信签名失败，则不进行验签操作
@@ -240,17 +266,7 @@ public class WechatHttpClient extends ServiceEndpointSupport {
         String timestamp = result.header(WechatConstants.HEADER_TIMESTAMP);
         String nonce = result.header(WechatConstants.HEADER_NONCE);
         String sign = result.header(WechatConstants.HEADER_SIGNATURE);
-        LOG.debug("\n------Wechat Platform Data Verify------\nWechatpay-Serial={}\nWechatpay-Timestamp={}\n"
-            + "Wechatpay-Nonce={}\nWechatpay-Signature={}\n{}\n--------------------------------------",
-            serialNo, timestamp, nonce, sign, result.responseText == null ? "" : result.responseText);
-        Optional<WechatCertificate> certOpt = wechatConfig.getCertificate(serialNo);
-        if (certOpt.isEmpty()) { // 找不到证书则重新向微信平台请求新证书(旧证书即将过期时出现)
-            refreshCertificates();
-        }
-        WechatCertificate certificate = wechatConfig.getCertificate(serialNo).orElseThrow(() ->
-            new PaymentPipelineException(ErrorCode.OPERATION_NOT_ALLOWED, "找不到微信平台数字证书"));
-        boolean success = WechatSignatureUtils.verify(result.responseText, timestamp, nonce, sign, certificate.getPublicKey());
-        if (!success) {
+        if (!dataVerify(serialNo, timestamp, nonce, sign, result.responseText)) {
             throw new PaymentPipelineException(ErrorCode.OPERATION_NOT_ALLOWED, "微信数据验签失败");
         }
     }

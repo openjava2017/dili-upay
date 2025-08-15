@@ -2,6 +2,7 @@ package com.diligrp.upay.trade.service.wechat;
 
 import com.diligrp.upay.core.domain.ApplicationPermit;
 import com.diligrp.upay.pipeline.domain.WechatPaymentResponse;
+import com.diligrp.upay.pipeline.domain.WechatPrepayOrder;
 import com.diligrp.upay.pipeline.domain.WechatPrepayResponse;
 import com.diligrp.upay.pipeline.domain.WechatRefundResponse;
 import com.diligrp.upay.pipeline.model.WechatPayment;
@@ -29,7 +30,7 @@ public class WechatTradeServiceImpl implements IWechatTradeService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void closePrepayOrder(WechatPayment payment) {
+    public void closePrepayOrder(WechatPrepayOrder order) {
 
     }
 }

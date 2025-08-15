@@ -15,6 +15,8 @@ public class WechatRefundDTO {
     private Long amount;
     // 费用列表
     private List<Fee> fees;
+    // 对账周期编号
+    private String cycleNo;
     // 回调地址
     private String notifyUri;
     // 退款原因
@@ -46,6 +48,14 @@ public class WechatRefundDTO {
 
     public Optional<List<Fee>> fees() {
         return fees != null && fees.size() > 0 ? Optional.of(fees) : Optional.empty();
+    }
+
+    public String getCycleNo() {
+        return cycleNo;
+    }
+
+    public void setCycleNo(String cycleNo) {
+        this.cycleNo = cycleNo;
     }
 
     public String getNotifyUri() {
